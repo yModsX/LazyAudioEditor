@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cortar - Editor de Áudio Mobile</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+  :root {
+    --bg-main: #08080A;
+    --bg-card: #101012;
+    --bg-card-hover: #101012;
+    --bg-button: #101012;
+    --bg-button-hover: #101012;
+    --color-primary: #fff;
+    --color-primary-hover: #101012;
+    --bg-primary: #101012;
+    --text-primary: #E4E5E7;
+    --text-secondary: #A4A7AE;
+    --text-muted: #777C85;
+    --border-color: #242426;
+  }
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .bg-custom-dark { background-color: var(--bg-main); }
+  .bg-custom-card { background-color: var(--bg-card); }
+  .bg-custom-blue-btn { background-color: var(--bg-button); }
+  .text-primary-blue { color: var(--color-primary); }
+  .bg-primary-blue { background-color: var(--bg-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-muted { color: var(--text-muted); }
+  .border-custom { border-color: var(--border-color); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  button:disabled { cursor: not-allowed; }
+  </style>
+</head>
+<body class="h-[100dvh] w-screen overflow-hidden flex flex-col justify-between bg-custom-dark">
+  <header class="flex items-center justify-between px-5 pt-4 pb-2 z-10 shrink-0">
+    <div class="flex items-center gap-4">
+      <button id="btn-import-trigger" class="text-xl text-gray-200 active:opacity-70 flex items-center gap-2" title="Importar Áudio">
+        <i class="fa-solid fa-folder-open text-primary-blue"></i>
+      </button>
+      <h1 class="text-xl font-bold tracking-wide">Cortar</h1>
+    </div>
+    <div class="flex items-center gap-6 text-lg text-gray-300">
+      <button id="btn-undo" class="hover:text-white active:opacity-70 disabled:opacity-30" title="Desfazer" aria-label="Desfazer" disabled>
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+      <button id="btn-redo" class="hover:text-white active:opacity-70 disabled:opacity-30" title="Refazer" aria-label="Refazer" disabled>
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
+    </div>
+  </header>
+
+  <input type="file" id="audio-file-input" accept="audio/*" class="hidden">
+
+  <div class="flex items-center justify-between px-4 py-2 shrink-0">
+    <div class="flex items-center bg-custom-blue-btn rounded-full px-3 py-1.5 gap-2 text-sm">
+      <button id="btn-sub-start" class="text-gray-300 hover:text-white active:scale-95"><i class="fa-solid fa-minus text-xs"></i></button>
+      <span id="label-start-time" class="font-mono text-xs font-semibold tracking-wider">00:00.0</span>
+      <button id="btn-add-start" class="text-gray-300 hover:text-white active:scale-95"><i class="fa-solid fa-plus text-xs"></i></button>
+    </div>
+    <div class="text-center">
+      <span class="text-xs text-gray-400 font-medium">Total </span>
+      <span id="label-total-time" class="text-xs font-bold font-mono">00:00.0</span>
+    </div>
+    <div class="flex items-center bg-custom-blue-btn rounded-full px-3 py-1.5 gap-2 text-sm">
+      <button id="btn-sub-end" class="text-gray-300 hover:text-white active:scale-95"><i class="fa-solid fa-minus text-xs"></i></button>
+      <span id="label-end-time" class="font-mono text-xs font-semibold tracking-wider">00:00.0</span>
+      <button id="btn-add-end" class="text-gray-300 hover:text-white active:scale-95"><i class="fa-solid fa-plus text-xs"></i></button>
+    </div>
+  </div>
+
+  <div class="relative flex-1 w-full my-auto flex flex-col justify-center overflow-hidden">
+    <div id="ruler-container" class="w-full h-6 relative overflow-hidden border-b border-gray-800/40 text-[10px] text-gray-400 font-mono shrink-0">
+      <canvas id="ruler-canvas" class="w-full h-full"></canvas>
+    </div>
+    <div id="waveform-wrapper" class="relative w-full flex-1 flex items-center justify-center cursor-pointer">
+      <canvas id="waveform-canvas" class="w-full h-full"></canvas>
+      <div id="waveform-empty-message" class="absolute inset-0 flex items-center justify-center px-6 text-center pointer-events-none">
+        <p class="text-sm text-gray-400"><i class="fa-solid fa-file-audio text-lg block mb-2 text-gray-500"></i>Nenhum áudio importado.<br><span class="text-xs text-gray-500">Toque no ícone da pasta para importar um áudio dos seus arquivos.</span></p>
+      </div>
+      <button id="remove-mark-overlay" type="button" class="hidden absolute z-30 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-2 shadow-lg" style="top: 12px; transform: translateX(-50%);">Remover marcação</button>
+      <div class="absolute top-0 bottom-0 left-1/2 w-px bg-white z-20 pointer-events-none"></div>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between px-6 py-2 shrink-0">
+    <button id="btn-mark-toggle" class="flex items-center gap-2 bg-custom-blue-btn active:bg-blue-600/50 text-primary-blue font-medium px-4 py-2 rounded-full text-sm transition-all border border-blue-500/20 shadow-lg">
+      <i class="fa-solid fa-arrows-left-right text-xs"></i><span id="mark-btn-text">Marcar</span>
+    </button>
+    <div class="flex items-center bg-custom-blue-btn rounded-full px-2 py-1 border border-blue-500/10">
+      <button id="btn-zoom-out" class="p-1.5 px-3 text-gray-300 hover:text-white active:scale-90"><i class="fa-solid fa-magnifying-glass-minus text-sm"></i></button>
+      <div class="w-px h-4 bg-gray-700"></div>
+      <button id="btn-zoom-in" class="p-1.5 px-3 text-gray-300 hover:text-white active:scale-90"><i class="fa-solid fa-magnifying-glass-plus text-sm"></i></button>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-center gap-8 py-3 shrink-0">
+    <button id="btn-skip-prev" class="w-12 h-12 rounded-full bg-custom-blue-btn flex items-center justify-center text-gray-200 active:scale-95 shadow-md"><i class="fa-solid fa-backward-step text-lg"></i></button>
+    <button id="btn-play-pause" class="w-16 h-16 rounded-full bg-primary-blue flex items-center justify-center text-white text-2xl active:scale-95 shadow-lg shadow-blue-500/30"><i id="play-icon" class="fa-solid fa-play ml-1"></i></button>
+    <button id="btn-skip-next" class="w-12 h-12 rounded-full bg-custom-blue-btn flex items-center justify-center text-gray-200 active:scale-95 shadow-md"><i class="fa-solid fa-forward-step text-lg"></i></button>
+  </div>
+
+  <div class="px-4 pb-6 pt-1 shrink-0">
+    <button id="btn-view-marks" class="w-full bg-custom-card active:bg-custom-blue-btn py-3.5 rounded-3xl text-center text-base font-semibold tracking-wide shadow-xl flex items-center justify-center gap-3 text-gray-100 transition-colors">
+      <span>Ver marcações</span><span id="marks-count-badge" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+    </button>
+  </div>
+
+  <div id="modal-marks" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col justify-end transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div class="bg-custom-card rounded-t-3xl p-6 max-h-[80vh] flex flex-col border-t border-gray-700/50 shadow-2xl">
+      <div class="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
+        <h3 class="text-lg font-bold text-gray-100">Trechos Errados Marcados</h3>
+        <button id="btn-close-modal" class="text-gray-400 text-xl p-2"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="marks-list" class="flex-1 overflow-y-auto space-y-3 my-2 pr-1 no-scrollbar">
+        <p class="text-gray-400 text-center py-6 text-sm">Nenhuma marcação feita ainda.</p>
+      </div>
+      <div class="mt-4 pt-3 border-t border-gray-800 space-y-3">
+        <div>
+          <label for="export-filename" class="block text-sm text-gray-300 mb-1.5">Nome do arquivo</label>
+          <div class="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-xl px-3">
+            <input id="export-filename" type="text" value="audio_limpo" maxlength="100" autocomplete="off" class="min-w-0 flex-1 bg-transparent py-3 text-white text-sm outline-none" placeholder="Digite o nome do arquivo">
+            <span class="text-gray-400 text-sm">.wav</span>
+          </div>
+        </div>
+        <div id="export-progress-container" class="hidden space-y-2" aria-live="polite">
+          <div class="flex items-center justify-between gap-3 text-xs">
+            <span id="export-progress-status" class="text-gray-300">Preparando exportação...</span>
+            <span id="export-progress-percent" class="text-primary-blue font-bold tabular-nums">0%</span>
+          </div>
+          <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div id="export-progress-bar" class="h-full w-0 bg-primary-blue rounded-full transition-[width] duration-150" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button id="btn-clear-all" class="flex-1 bg-gray-800 text-gray-300 py-3 rounded-2xl font-semibold text-sm active:bg-gray-700">Limpar Tudo</button>
+          <button id="btn-export-audio" class="flex-1 bg-red-500 text-white py-3 rounded-2xl font-bold text-sm active:bg-red-600 shadow-lg shadow-red-500/30">Remover e Exportar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const state = {
+  audioContext: null, audioBuffer: null, sourceNode: null, gainNode: null, compressorNode: null, audioPeak: null,
+  isPlaying: false, currentTime: 0, duration: 0, zoomLevel: 15,
+  isMarking: false, selectionStart: null, selectionEnd: null, marks: [],
+  playbackStartTime: 0, playbackOffset: 0, isDragging: false,
+  dragStartX: 0, initialPinchDistance: null
+};
+
+const waveformCanvas = document.getElementById('waveform-canvas');
+const waveformCtx = waveformCanvas.getContext('2d');
+const rulerCanvas = document.getElementById('ruler-canvas');
+const rulerCtx = rulerCanvas.getContext('2d');
+const waveformWrapper = document.getElementById('waveform-wrapper');
+const waveformEmptyMessage = document.getElementById('waveform-empty-message');
+const removeMarkOverlay = document.getElementById('remove-mark-overlay');
+const waveformCache = document.createElement('canvas');
+const waveformCacheCtx = waveformCache.getContext('2d');
+let waveformCacheKey = '';
+const btnPlayPause = document.getElementById('btn-play-pause');
+const playIcon = document.getElementById('play-icon');
+const btnMarkToggle = document.getElementById('btn-mark-toggle');
+const markBtnText = document.getElementById('mark-btn-text');
+const labelStartTime = document.getElementById('label-start-time');
+const labelEndTime = document.getElementById('label-end-time');
+const labelTotalTime = document.getElementById('label-total-time');
+const btnViewMarks = document.getElementById('btn-view-marks');
+const modalMarks = document.getElementById('modal-marks');
+const btnCloseModal = document.getElementById('btn-close-modal');
+const marksList = document.getElementById('marks-list');
+const marksCountBadge = document.getElementById('marks-count-badge');
+const audioFileInput = document.getElementById('audio-file-input');
+const btnUndo = document.getElementById('btn-undo');
+const btnRedo = document.getElementById('btn-redo');
+
+const HISTORY_LIMIT = 100;
+let historyPast = [];
+let historyFuture = [];
+
+function cloneMarks(marks = state.marks) {
+  return marks.map(mark => ({ id: mark.id, start: mark.start, end: mark.end }));
+}
+function historySnapshot() {
+  return { marks: cloneMarks(), selectionStart: state.selectionStart, selectionEnd: state.selectionEnd, isMarking: state.isMarking };
+}
+function updateHistoryButtons() {
+  btnUndo.disabled = historyPast.length === 0;
+  btnRedo.disabled = historyFuture.length === 0;
+}
+function saveHistory() {
+  historyPast.push(historySnapshot());
+  if (historyPast.length > HISTORY_LIMIT) historyPast.shift();
+  historyFuture = [];
+  updateHistoryButtons();
+}
+function restoreHistory(snapshot) {
+  state.marks = cloneMarks(snapshot.marks);
+  state.selectionStart = snapshot.selectionStart;
+  state.selectionEnd = snapshot.selectionEnd;
+  state.isMarking = snapshot.isMarking;
+  btnMarkToggle.classList.toggle('bg-red-500', state.isMarking);
+  btnMarkToggle.classList.toggle('text-white', state.isMarking);
+  markBtnText.textContent = state.isMarking ? 'Fixar Fim' : 'Marcar';
+  removeMarkOverlay.classList.add('hidden');
+  invalidateWaveformCache();
+  updateBadge();
+  updateLabels();
+  renderMarksList();
+  drawWaveform();
+  drawRuler();
+}
+function undoAction() {
+  if (!historyPast.length) return;
+  historyFuture.push(historySnapshot());
+  const previous = historyPast.pop();
+  restoreHistory(previous);
+  updateHistoryButtons();
+}
+function redoAction() {
+  if (!historyFuture.length) return;
+  historyPast.push(historySnapshot());
+  const next = historyFuture.pop();
+  restoreHistory(next);
+  updateHistoryButtons();
+}
+function resetHistory() {
+  historyPast = [];
+  historyFuture = [];
+  updateHistoryButtons();
+}
+
+window.addEventListener('load', () => {
+  resizeCanvases();
+  setupListeners();
+  requestAnimationFrame(renderLoop);
+});
+window.addEventListener('resize', resizeCanvases);
+
+function getAudioContext() {
+  if (!state.audioContext) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) throw new Error('Este navegador não oferece suporte à reprodução de áudio.');
+    state.audioContext = new AudioCtx();
+  }
+  if (state.audioContext.state === 'suspended') state.audioContext.resume().catch(console.error);
+  return state.audioContext;
+}
+function invalidateWaveformCache() { waveformCacheKey = ''; }
+
+function resizeCanvases() {
+  const dpr = window.devicePixelRatio || 1;
+  if (waveformWrapper.clientWidth > 0 && waveformWrapper.clientHeight > 0) {
+    waveformCanvas.width = Math.round(waveformWrapper.clientWidth * dpr);
+    waveformCanvas.height = Math.round(waveformWrapper.clientHeight * dpr);
+  }
+  if (rulerCanvas.parentElement.clientWidth > 0) {
+    rulerCanvas.width = Math.round(rulerCanvas.parentElement.clientWidth * dpr);
+    rulerCanvas.height = Math.round(rulerCanvas.parentElement.clientHeight * dpr);
+  }
+  invalidateWaveformCache();
+  drawWaveform();
+  drawRuler();
+}
+
+function formatTime(secs) {
+  if (!Number.isFinite(secs) || secs < 0) secs = 0;
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  const ds = Math.floor((secs % 1) * 10);
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ds}`;
+}
+function updateLabels() {
+  labelTotalTime.textContent = formatTime(state.duration);
+  labelStartTime.textContent = formatTime(state.selectionStart !== null ? state.selectionStart : state.currentTime);
+  labelEndTime.textContent = formatTime(state.selectionEnd !== null ? state.selectionEnd : Math.min(state.duration, state.currentTime + 3));
+}
+
+function drawRuler() {
+  const w = rulerCanvas.width, h = rulerCanvas.height;
+  rulerCtx.clearRect(0, 0, w, h);
+  if (!w || !h || !state.duration) return;
+  rulerCtx.fillStyle = '#6b7280';
+  rulerCtx.strokeStyle = '#374151';
+  rulerCtx.font = `${10 * (window.devicePixelRatio || 1)}px monospace`;
+  const visibleDur = state.duration / state.zoomLevel;
+  const startT = Math.max(0, Math.min(state.duration - visibleDur, state.currentTime - visibleDur / 2));
+  const endT = Math.min(state.duration, startT + visibleDur);
+  const step = state.zoomLevel > 10 ? 0.1 : (state.zoomLevel > 3 ? 0.2 : 0.5);
+  for (let t = Math.floor(startT / step) * step; t <= endT; t += step) {
+    const x = ((t - startT) / visibleDur) * w;
+    rulerCtx.beginPath();
+    rulerCtx.moveTo(x, h);
+    if (Math.abs(t % 1) < 0.05 || Math.abs(t % 1 - 1) < 0.05) {
+      rulerCtx.lineTo(x, h - 8 * (window.devicePixelRatio || 1));
+      rulerCtx.fillText(`${t.toFixed(1)}s`, x + 2, 10 * (window.devicePixelRatio || 1));
+    } else rulerCtx.lineTo(x, h - 4 * (window.devicePixelRatio || 1));
+    rulerCtx.stroke();
+  }
+}
+
+function buildWaveformCache() {
+  if (!state.audioBuffer) return;
+  const w = waveformCanvas.width, h = waveformCanvas.height;
+  if (!w || !h) return;
+  const marksKey = state.marks.map(m => `${m.id}:${m.start}:${m.end}`).join('|');
+  const key = [state.audioBuffer.sampleRate, state.audioBuffer.length, state.zoomLevel, w, h, marksKey].join('_');
+  if (key === waveformCacheKey) return;
+  const cacheWidth = Math.max(1, Math.min(30000, Math.round(w * state.zoomLevel)));
+  waveformCache.width = cacheWidth;
+  waveformCache.height = h;
+  waveformCacheCtx.clearRect(0, 0, cacheWidth, h);
+  const channelData = state.audioBuffer.getChannelData(0);
+  const barWidthScreen = Math.max(1, 3 * (window.devicePixelRatio || 1));
+  const barGapScreen = Math.max(1, 2 * (window.devicePixelRatio || 1));
+  const scale = cacheWidth / w;
+  const barWidth = Math.max(1, barWidthScreen * scale / state.zoomLevel);
+  const barGap = Math.max(1, barGapScreen * scale / state.zoomLevel);
+  const stepX = barWidth + barGap;
+  const totalBars = Math.ceil(cacheWidth / stepX);
+  for (let i = 0; i < totalBars; i++) {
+    const x = i * stepX;
+    const startSample = Math.floor((x / cacheWidth) * channelData.length);
+    const endSample = Math.min(channelData.length, Math.max(startSample + 1, Math.floor(((x + stepX) / cacheWidth) * channelData.length)));
+    let max = 0;
+    for (let j = startSample; j < endSample; j++) {
+      const value = Math.abs(channelData[j] || 0);
+      if (value > max) max = value;
+    }
+    const barH = Math.max(4, max * h * 0.85);
+    const y = (h - barH) / 2;
+    const timeAtBar = (x / cacheWidth) * state.duration;
+    const isError = state.marks.some(m => timeAtBar >= m.start && timeAtBar <= m.end);
+    waveformCacheCtx.fillStyle = isError ? '#ef4444' : '#2da1ff';
+    waveformCacheCtx.beginPath();
+    if (typeof waveformCacheCtx.roundRect === 'function') waveformCacheCtx.roundRect(x, y, Math.min(barWidth, cacheWidth - x), barH, 2);
+    else waveformCacheCtx.rect(x, y, Math.min(barWidth, cacheWidth - x), barH);
+    waveformCacheCtx.fill();
+  }
+  waveformCacheKey = key;
+}
+
+function drawWaveform() {
+  const w = waveformCanvas.width, h = waveformCanvas.height;
+  waveformCtx.clearRect(0, 0, w, h);
+  const hasAudio = !!state.audioBuffer && w > 0 && h > 0 && state.duration > 0;
+  waveformEmptyMessage.classList.toggle('hidden', hasAudio);
+  if (!hasAudio) {
+    removeMarkOverlay.classList.add('hidden');
+    return;
+  }
+  buildWaveformCache();
+  const visibleDur = Math.min(state.duration, state.duration / state.zoomLevel);
+  const startT = Math.max(0, Math.min(Math.max(0, state.duration - visibleDur), state.currentTime - visibleDur / 2));
+  const actualVisibleDur = Math.max(0.000001, Math.min(visibleDur, state.duration - startT));
+  const sourceX = (startT / state.duration) * waveformCache.width;
+  const sourceWidth = Math.min((actualVisibleDur / state.duration) * waveformCache.width, waveformCache.width - sourceX);
+  if (sourceWidth > 0) waveformCtx.drawImage(waveformCache, sourceX, 0, sourceWidth, h, 0, 0, w, h);
+
+  // Prévia: um ponto verde no início, sem faixa translúcida vermelha.
+  if (state.isMarking && state.selectionStart !== null) {
+    const x = ((state.selectionStart - startT) / actualVisibleDur) * w;
+    if (x >= 0 && x <= w) {
+      waveformCtx.beginPath();
+      waveformCtx.arc(x, h / 2, 4 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+      waveformCtx.fillStyle = '#ef4444';
+      waveformCtx.fill();
+    }
+  }
+}
+
+function renderLoop() {
+  if (state.isPlaying) {
+    const actx = getAudioContext();
+    state.currentTime = state.playbackOffset + (actx.currentTime - state.playbackStartTime);
+    if (state.currentTime >= state.duration) {
+      state.currentTime = state.duration;
+      stopAudioPlayback();
+      state.isPlaying = false;
+      playIcon.className = 'fa-solid fa-play ml-1';
+    }
+    updateLabels(); drawWaveform(); drawRuler();
+  }
+  requestAnimationFrame(renderLoop);
+}
+
+function setupListeners() {
+  btnUndo.addEventListener('click', undoAction);
+  btnRedo.addEventListener('click', redoAction);
+
+  document.getElementById('btn-import-trigger').addEventListener('click', () => {
+    try { getAudioContext(); audioFileInput.click(); }
+    catch (err) { alert(err.message || 'Não foi possível iniciar o áudio neste navegador.'); }
+  });
+
+  audioFileInput.addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const actx = getAudioContext();
+      const arrayBuf = await file.arrayBuffer();
+      const decodedBuffer = await actx.decodeAudioData(arrayBuf);
+      stopAudioPlayback();
+      state.audioBuffer = decodedBuffer;
+      state.audioPeak = null;
+      state.duration = decodedBuffer.duration;
+      removeMarkOverlay.classList.add('hidden');
+      state.currentTime = 0; state.playbackOffset = 0;
+      state.marks = []; state.selectionStart = null; state.selectionEnd = null;
+      state.isPlaying = false; state.isMarking = false;
+      btnMarkToggle.classList.remove('bg-red-500', 'text-white');
+      markBtnText.textContent = 'Marcar';
+      playIcon.className = 'fa-solid fa-play ml-1';
+      resetHistory();
+      updateBadge(); invalidateWaveformCache(); updateLabels(); resizeCanvases();
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível carregar este formato de áudio. Tente outro arquivo (.mp3 ou .wav).');
+    }
+    audioFileInput.value = '';
+  });
+
+  btnPlayPause.addEventListener('click', async () => {
+    try {
+      if (!state.audioBuffer) { alert('Importe um áudio antes de reproduzir.'); return; }
+      const actx = getAudioContext();
+      await actx.resume();
+      if (!state.isPlaying) {
+        if (state.currentTime >= state.duration) state.currentTime = 0;
+        state.isPlaying = true;
+        startAudioPlayback();
+        playIcon.className = 'fa-solid fa-pause';
+      } else {
+        stopAudioPlayback();
+        state.isPlaying = false;
+        playIcon.className = 'fa-solid fa-play ml-1';
+      }
+    } catch (err) { console.error(err); alert('Não foi possível reproduzir o áudio neste navegador.'); }
+  });
+
+  document.getElementById('btn-skip-prev').addEventListener('click', () => {
+    state.currentTime = 0;
+    if (state.isPlaying) startAudioPlayback();
+    updateLabels(); drawWaveform(); drawRuler();
+  });
+  document.getElementById('btn-skip-next').addEventListener('click', () => {
+    stopAudioPlayback(); state.currentTime = state.duration; state.isPlaying = false;
+    playIcon.className = 'fa-solid fa-play ml-1';
+    updateLabels(); drawWaveform(); drawRuler();
+  });
+
+  function adjustSelectionTime(which, delta) {
+    if (!state.audioBuffer) return;
+    const beforeStart = state.selectionStart;
+    const beforeEnd = state.selectionEnd;
+    let nextStart = beforeStart;
+    let nextEnd = beforeEnd;
+    if (which === 'start') {
+      if (nextStart === null) nextStart = state.currentTime;
+      nextStart = Math.max(0, Math.min(state.duration, nextStart + delta));
+    } else {
+      if (nextEnd === null) nextEnd = Math.min(state.duration, state.currentTime + 3);
+      nextEnd = Math.max(0, Math.min(state.duration, nextEnd + delta));
+    }
+    if (beforeStart !== nextStart || beforeEnd !== nextEnd) {
+      saveHistory();
+      state.selectionStart = nextStart;
+      state.selectionEnd = nextEnd;
+    }
+    updateLabels(); drawWaveform();
+  }
+  document.getElementById('btn-sub-start').addEventListener('click', () => adjustSelectionTime('start', -0.1));
+  document.getElementById('btn-add-start').addEventListener('click', () => adjustSelectionTime('start', 0.1));
+  document.getElementById('btn-sub-end').addEventListener('click', () => adjustSelectionTime('end', -0.1));
+  document.getElementById('btn-add-end').addEventListener('click', () => adjustSelectionTime('end', 0.1));
+
+  btnMarkToggle.addEventListener('click', () => {
+    if (!state.audioBuffer) {
+      alert('Importe um áudio antes de fazer marcações.');
+      return;
+    }
+    if (!state.isMarking) {
+      // Guarda o estado anterior para que a ação possa ser desfeita.
+      saveHistory();
+      state.isMarking = true;
+      state.selectionStart = state.currentTime;
+      state.selectionEnd = null;
+      btnMarkToggle.classList.add('bg-red-500', 'text-white');
+      markBtnText.textContent = 'Fixar Fim';
+    } else {
+      const start = state.selectionStart;
+      const end = state.currentTime;
+      state.isMarking = false;
+
+      if (start !== null && Math.abs(end - start) > 0.005) {
+        state.marks.push({
+          id: Date.now() + Math.random(),
+          start: Math.min(start, end),
+          end: Math.max(start, end)
+        });
+      }
+      state.selectionStart = null;
+      state.selectionEnd = null;
+      btnMarkToggle.classList.remove('bg-red-500', 'text-white');
+      markBtnText.textContent = 'Marcar';
+      invalidateWaveformCache(); updateBadge(); renderMarksList();
+    }
+    updateLabels(); drawWaveform(); drawRuler();
+  });
+
+  document.getElementById('btn-zoom-in').addEventListener('click', () => {
+    state.zoomLevel = Math.min(30, state.zoomLevel + 2);
+    invalidateWaveformCache(); drawWaveform(); drawRuler();
+  });
+  document.getElementById('btn-zoom-out').addEventListener('click', () => {
+    state.zoomLevel = Math.max(1, state.zoomLevel - 2);
+    invalidateWaveformCache(); drawWaveform(); drawRuler();
+  });
+
+  const tapCandidates = new Map();
+  const activePointers = new Map();
+  waveformWrapper.addEventListener('pointerdown', startPointer);
+  removeMarkOverlay.addEventListener('pointerdown', e => e.stopPropagation());
+  removeMarkOverlay.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const markId = Number(removeMarkOverlay.dataset.markId);
+    if (Number.isFinite(markId)) removeMark(markId);
+    removeMarkOverlay.classList.add('hidden');
+  });
+  window.addEventListener('pointermove', movePointer);
+  window.addEventListener('pointerup', endPointer);
+  window.addEventListener('pointercancel', endPointer);
+
+  function startPointer(e) {
+    if (e.target === removeMarkOverlay) return;
+    activePointers.set(e.pointerId, e);
+    tapCandidates.set(e.pointerId, { x: e.clientX, y: e.clientY, moved: false });
+    if (activePointers.size === 1) { state.isDragging = true; state.dragStartX = e.clientX; }
+    else if (activePointers.size === 2) {
+      state.isDragging = false;
+      const p = Array.from(activePointers.values());
+      state.initialPinchDistance = Math.hypot(p[0].clientX - p[1].clientX, p[0].clientY - p[1].clientY);
+    }
+  }
+  function movePointer(e) {
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, e);
+    const tap = tapCandidates.get(e.pointerId);
+    if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8) tap.moved = true;
+    if (activePointers.size === 2 && state.initialPinchDistance) {
+      const p = Array.from(activePointers.values());
+      const dist = Math.hypot(p[0].clientX - p[1].clientX, p[0].clientY - p[1].clientY);
+      const factor = dist / state.initialPinchDistance;
+      state.zoomLevel = Math.max(1, Math.min(30, state.zoomLevel * factor));
+      state.initialPinchDistance = dist;
+      invalidateWaveformCache(); drawWaveform(); drawRuler();
+    } else if (activePointers.size === 1 && state.isDragging) {
+      const deltaX = e.clientX - state.dragStartX; state.dragStartX = e.clientX;
+      const visibleDur = state.duration / state.zoomLevel;
+      const timeDelta = (deltaX / waveformWrapper.clientWidth) * visibleDur;
+      state.currentTime = Math.max(0, Math.min(state.duration, state.currentTime - timeDelta));
+      updateLabels(); drawWaveform(); drawRuler();
+      if (state.isPlaying) startAudioPlayback();
+    }
+  }
+  function endPointer(e) {
+    const tap = tapCandidates.get(e.pointerId);
+    const wasSinglePointer = activePointers.size === 1;
+    activePointers.delete(e.pointerId);
+    tapCandidates.delete(e.pointerId);
+    if (activePointers.size < 2) state.initialPinchDistance = null;
+    if (activePointers.size === 0) state.isDragging = false;
+    if (tap && !tap.moved && wasSinglePointer && state.audioBuffer) {
+      const rect = waveformWrapper.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const visibleDur = Math.min(state.duration, state.duration / state.zoomLevel);
+      const startT = Math.max(0, Math.min(Math.max(0, state.duration - visibleDur), state.currentTime - visibleDur / 2));
+      const tappedTime = startT + (x / Math.max(1, rect.width)) * visibleDur;
+      const hitMark = state.marks.find(mark => tappedTime >= mark.start && tappedTime <= mark.end);
+      if (hitMark) {
+        removeMarkOverlay.dataset.markId = String(hitMark.id);
+        removeMarkOverlay.style.left = `${Math.max(72, Math.min(rect.width - 72, x))}px`;
+        removeMarkOverlay.classList.remove('hidden');
+      } else {
+        removeMarkOverlay.classList.add('hidden');
+      }
+    }
+  }
+
+  btnViewMarks.addEventListener('click', () => {
+    renderMarksList(); modalMarks.classList.remove('opacity-0', 'pointer-events-none');
+  });
+  btnCloseModal.addEventListener('click', () => modalMarks.classList.add('opacity-0', 'pointer-events-none'));
+  modalMarks.addEventListener('click', e => {
+    if (e.target === modalMarks) modalMarks.classList.add('opacity-0', 'pointer-events-none');
+  });
+  document.getElementById('btn-clear-all').addEventListener('click', () => {
+    if (!state.marks.length) return;
+    saveHistory();
+    state.marks = [];
+    removeMarkOverlay.classList.add('hidden');
+    invalidateWaveformCache(); updateBadge(); renderMarksList(); drawWaveform();
+  });
+  document.getElementById('btn-export-audio').addEventListener('click', exportCleanAudio);
+}
+
+function startAudioPlayback() {
+  if (!state.audioBuffer) return;
+  const actx = getAudioContext();
+  if (state.sourceNode) {
+    try { state.sourceNode.onended = null; state.sourceNode.stop(); } catch (e) {}
+    try { state.sourceNode.disconnect(); } catch (e) {}
+    state.sourceNode = null;
+  }
+  if (state.gainNode) { try { state.gainNode.disconnect(); } catch (e) {} state.gainNode = null; }
+  if (state.compressorNode) { try { state.compressorNode.disconnect(); } catch (e) {} state.compressorNode = null; }
+  const source = actx.createBufferSource();
+  source.buffer = state.audioBuffer;
+  if (state.audioPeak === null) {
+    let peak = 0;
+    for (let c = 0; c < state.audioBuffer.numberOfChannels; c++) {
+      const channel = state.audioBuffer.getChannelData(c);
+      for (let i = 0; i < channel.length; i++) peak = Math.max(peak, Math.abs(channel[i]));
+    }
+    state.audioPeak = peak;
+  }
+  const peak = state.audioPeak || 0;
+  const gain = actx.createGain();
+  gain.gain.value = peak > 0 ? Math.min(8, 0.9 / peak) : 1;
+  const compressor = actx.createDynamicsCompressor();
+  compressor.threshold.value = -3; compressor.knee.value = 6; compressor.ratio.value = 4;
+  compressor.attack.value = 0.003; compressor.release.value = 0.2;
+  source.connect(gain); gain.connect(compressor); compressor.connect(actx.destination);
+  state.gainNode = gain; state.compressorNode = compressor;
+  state.playbackOffset = Math.max(0, Math.min(state.currentTime, state.duration));
+  state.playbackStartTime = actx.currentTime;
+  source.onended = () => {
+    if (state.sourceNode === source && state.isPlaying && state.currentTime >= state.duration) {
+      state.isPlaying = false; state.currentTime = state.duration; state.sourceNode = null;
+      if (state.gainNode) { try { state.gainNode.disconnect(); } catch (e) {} state.gainNode = null; }
+      if (state.compressorNode) { try { state.compressorNode.disconnect(); } catch (e) {} state.compressorNode = null; }
+      playIcon.className = 'fa-solid fa-play ml-1';
+    }
+  };
+  source.start(0, state.playbackOffset);
+  state.sourceNode = source;
+}
+function stopAudioPlayback() {
+  if (state.sourceNode) {
+    try { state.sourceNode.onended = null; state.sourceNode.stop(); } catch (e) {}
+    try { state.sourceNode.disconnect(); } catch (e) {}
+    state.sourceNode = null;
+  }
+  if (state.gainNode) { try { state.gainNode.disconnect(); } catch (e) {} state.gainNode = null; }
+  if (state.compressorNode) { try { state.compressorNode.disconnect(); } catch (e) {} state.compressorNode = null; }
+  if (state.isPlaying && state.audioContext) {
+    const elapsed = state.audioContext.currentTime - state.playbackStartTime;
+    state.currentTime = Math.min(state.playbackOffset + elapsed, state.duration);
+  }
+}
+function updateBadge() {
+  if (state.marks.length > 0) {
+    marksCountBadge.textContent = state.marks.length;
+    marksCountBadge.classList.remove('hidden');
+  } else marksCountBadge.classList.add('hidden');
+}
+function renderMarksList() {
+  if (state.marks.length === 0) {
+    marksList.innerHTML = '<p class="text-gray-400 text-center py-6 text-sm">Nenhum trecho de erro marcado.</p>';
+    return;
+  }
+  marksList.innerHTML = state.marks.map((m, idx) => `
+    <div class="flex items-center justify-between bg-gray-900/90 p-3 rounded-2xl border border-red-500/30">
+      <div class="flex items-center gap-3">
+        <span class="bg-red-500/20 text-red-400 text-xs font-bold px-2.5 py-1 rounded-lg">#${idx + 1}</span>
+        <div><p class="text-xs text-gray-400">Trecho Errado</p>
+        <p class="text-sm font-mono font-bold text-gray-200">${formatTime(m.start)} ➔ ${formatTime(m.end)}</p></div>
+      </div>
+      <button data-remove-mark="${m.id}" class="text-gray-500 hover:text-red-400 p-2" aria-label="Remover marcação"><i class="fa-solid fa-trash-can"></i></button>
+    </div>`).join('');
+  marksList.querySelectorAll('[data-remove-mark]').forEach(button => {
+    button.addEventListener('click', () => removeMark(Number(button.dataset.removeMark)));
+  });
+}
+function removeMark(id) {
+  const existing = state.marks.find(m => Number(m.id) === Number(id));
+  if (!existing) return;
+  saveHistory();
+  state.marks = state.marks.filter(m => Number(m.id) !== Number(id));
+  if (Number(removeMarkOverlay.dataset.markId) === Number(id)) removeMarkOverlay.classList.add('hidden');
+  invalidateWaveformCache(); updateBadge(); renderMarksList(); drawWaveform();
+}
+
+const exportFilenameInput = document.getElementById('export-filename');
+const exportProgressContainer = document.getElementById('export-progress-container');
+const exportProgressStatus = document.getElementById('export-progress-status');
+const exportProgressPercent = document.getElementById('export-progress-percent');
+const exportProgressBar = document.getElementById('export-progress-bar');
+function updateExportProgress(percent, message) {
+  const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+  exportProgressContainer.classList.remove('hidden');
+  exportProgressStatus.textContent = message;
+  exportProgressPercent.textContent = `${safePercent}%`;
+  exportProgressBar.style.width = `${safePercent}%`;
+  exportProgressBar.setAttribute('aria-valuenow', String(safePercent));
+}
+function yieldToUI() { return new Promise(resolve => window.setTimeout(resolve, 0)); }
+function sanitizeExportFilename(value) {
+  let name = String(value || '').trim().replace(/\.wav$/i, '');
+  name = name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').replace(/[. ]+$/g, '').trim();
+  return name.slice(0, 100);
+}
+async function exportCleanAudio() {
+  const button = document.getElementById('btn-export-audio');
+  if (!state.audioBuffer) { alert('Importe um áudio antes de exportar.'); return; }
+  if (!state.marks.length) { alert('Você ainda não marcou nenhum trecho para remover.'); return; }
+  if (button.disabled) return;
+  const filenameBase = sanitizeExportFilename(exportFilenameInput.value);
+  if (!filenameBase) { alert('Digite um nome válido para o arquivo.'); exportFilenameInput.focus(); return; }
+  const filename = `${filenameBase}.wav`;
+  const originalButtonHTML = button.innerHTML;
+  button.disabled = true; exportFilenameInput.disabled = true;
+  document.getElementById('btn-clear-all').disabled = true;
+  button.textContent = 'Exportando...';
+  updateExportProgress(0, 'Preparando áudio...');
+  try {
+    stopAudioPlayback(); state.isPlaying = false; playIcon.className = 'fa-solid fa-play ml-1';
+    const buffer = state.audioBuffer;
+    const sampleRate = buffer.sampleRate;
+    const channels = buffer.numberOfChannels;
+    const sorted = state.marks.map(m => ({
+      start: Math.max(0, Math.min(state.duration, Math.min(m.start, m.end))),
+      end: Math.max(0, Math.min(state.duration, Math.max(m.start, m.end)))
+    })).filter(m => m.end - m.start > 0.000001).sort((a, b) => a.start - b.start);
+    const merged = [];
+    for (const mark of sorted) {
+      const last = merged[merged.length - 1];
+      if (last && mark.start <= last.end) last.end = Math.max(last.end, mark.end);
+      else merged.push({ ...mark });
+    }
+    updateExportProgress(5, 'Calculando os trechos que serão mantidos...');
+    await yieldToUI();
+    const keepIntervals = [];
+    let cursor = 0;
+    for (const mark of merged) {
+      if (mark.start > cursor) keepIntervals.push({ start: cursor, end: mark.start });
+      cursor = Math.max(cursor, mark.end);
+    }
+    if (cursor < state.duration) keepIntervals.push({ start: cursor, end: state.duration });
+    const segments = keepIntervals.map(interval => ({
+      startSample: Math.max(0, Math.min(buffer.length, Math.floor(interval.start * sampleRate))),
+      endSample: Math.max(0, Math.min(buffer.length, Math.floor(interval.end * sampleRate)))
+    })).filter(segment => segment.endSample > segment.startSample);
+    const totalSamples = segments.reduce((sum, segment) => sum + segment.endSample - segment.startSample, 0);
+    if (!totalSamples) {
+      exportProgressContainer.classList.add('hidden');
+      alert('As marcações removeriam todo o áudio. Não há conteúdo restante para exportar.');
+      return;
+    }
+    updateExportProgress(10, 'Preparando o áudio final...');
+    await yieldToUI();
+    const outputBuffer = getAudioContext().createBuffer(channels, totalSamples, sampleRate);
+    let copiedSamples = 0;
+    for (let c = 0; c < channels; c++) {
+      const sourceData = buffer.getChannelData(c);
+      const targetData = outputBuffer.getChannelData(c);
+      let writeOffset = 0;
+      for (const segment of segments) {
+        const chunk = sourceData.subarray(segment.startSample, segment.endSample);
+        targetData.set(chunk, writeOffset);
+        writeOffset += chunk.length;
+        copiedSamples += chunk.length;
+      }
+      updateExportProgress(10 + (copiedSamples / (totalSamples * channels)) * 40, 'Montando os trechos de áudio...');
+      await yieldToUI();
+    }
+    const wavBlob = await bufferToWav(outputBuffer, progress => updateExportProgress(50 + progress * 0.45, 'Gerando o arquivo WAV...'));
+    updateExportProgress(96, 'Preparando o download...');
+    await yieldToUI();
+    const url = URL.createObjectURL(wavBlob);
+    const link = document.createElement('a');
+    link.href = url; link.download = filename; link.style.display = 'none';
+    document.body.appendChild(link); link.click(); link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    updateExportProgress(100, 'Exportação concluída!');
+    await new Promise(resolve => window.setTimeout(resolve, 350));
+    modalMarks.classList.add('opacity-0', 'pointer-events-none');
+    window.setTimeout(() => {
+      exportProgressContainer.classList.add('hidden');
+      exportProgressBar.style.width = '0%';
+      exportProgressBar.setAttribute('aria-valuenow', '0');
+    }, 60000);
+  } catch (error) {
+    console.error('Erro ao exportar áudio:', error);
+    exportProgressContainer.classList.add('hidden');
+    alert('Não foi possível exportar o áudio. Tente novamente ou use um áudio menor.');
+  } finally {
+    button.disabled = false; button.innerHTML = originalButtonHTML;
+    exportFilenameInput.disabled = false;
+    document.getElementById('btn-clear-all').disabled = false;
+  }
+}
+async function bufferToWav(buffer, onProgress = () => {}) {
+  const numChannels = buffer.numberOfChannels;
+  const bytesPerSample = 2;
+  const dataLength = buffer.length * numChannels * bytesPerSample;
+  const out = new DataView(new ArrayBuffer(44 + dataLength));
+  let pos = 0;
+  const writeString = value => { for (let i = 0; i < value.length; i++) out.setUint8(pos++, value.charCodeAt(i)); };
+  const writeUint16 = value => { out.setUint16(pos, value, true); pos += 2; };
+  const writeUint32 = value => { out.setUint32(pos, value, true); pos += 4; };
+  writeString('RIFF'); writeUint32(36 + dataLength); writeString('WAVE'); writeString('fmt ');
+  writeUint32(16); writeUint16(1); writeUint16(numChannels); writeUint32(buffer.sampleRate);
+  writeUint32(buffer.sampleRate * numChannels * bytesPerSample); writeUint16(numChannels * bytesPerSample);
+  writeUint16(16); writeString('data'); writeUint32(dataLength);
+  const channels = Array.from({ length: numChannels }, (_, i) => buffer.getChannelData(i));
+  const chunkSize = 32768;
+  for (let start = 0; start < buffer.length; start += chunkSize) {
+    const end = Math.min(buffer.length, start + chunkSize);
+    for (let i = start; i < end; i++) {
+      for (let c = 0; c < numChannels; c++) {
+        const sample = Math.max(-1, Math.min(1, channels[c][i] || 0));
+        const pcm = sample < 0 ? Math.round(sample * 32768) : Math.round(sample * 32767);
+        out.setInt16(pos, pcm, true); pos += 2;
+      }
+    }
+    onProgress(end / buffer.length * 100);
+    await yieldToUI();
+  }
+  return new Blob([out.buffer], { type: 'audio/wav' });
+}
+</script>
+</body>
+</html>
