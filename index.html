@@ -64,7 +64,6 @@
   .modal-panel { background:#101012;border:1px solid #29292d;border-radius:24px; }
   .progress-track { width:100%;height:8px;background:#27272a;border-radius:999px;overflow:hidden; }
   .progress-fill { height:100%;width:0;background:#f4f4f5;border-radius:999px;transition:width .12s linear; }
-  /* Mesmo esquema neutro da tela inicial aplicado ao editor. */
   #editor-screen { background:#08080A;color:#E4E5E7; }
   #editor-screen .bg-custom-card, #editor-screen .bg-custom-blue-btn { background:#101012 !important; }
   @media (max-width:380px) { #editor-screen header { padding-left:12px; padding-right:12px; } #editor-project-title { max-width:112px; } .editor-header-action { width:31px;height:32px; } }
@@ -89,7 +88,6 @@
 </head>
 <body class="h-[100dvh] w-screen overflow-hidden flex flex-col justify-between bg-custom-dark">
 
-  <!-- TELA INICIAL -->
   <section id="home-screen" class="screen is-active overflow-y-auto px-5 pt-8 pb-8">
     <div class="max-w-xl mx-auto min-h-full flex flex-col">
       <header class="flex items-center justify-between mb-12">
@@ -120,7 +118,6 @@
     </div>
   </section>
 
-  <!-- MODAL CRIAR PROJETO -->
   <section id="create-project-screen" class="screen overflow-y-auto px-5 pt-6 pb-8">
     <div class="max-w-xl mx-auto">
       <header class="flex items-center gap-4 mb-8">
@@ -146,7 +143,6 @@
     </div>
   </section>
 
-  <!-- EDITOR ORIGINAL -->
   <main id="editor-screen" class="screen h-[100dvh] w-screen overflow-hidden flex flex-col justify-between bg-custom-dark">
     <header class="flex items-center justify-between px-5 pt-4 pb-2 z-10 shrink-0">
       <div class="flex items-center gap-3 min-w-0">
@@ -203,7 +199,6 @@
     <div class="px-4 pb-6 pt-1 shrink-0"><button id="btn-view-marks" class="w-full bg-custom-card active:bg-custom-blue-btn py-3.5 rounded-3xl text-center text-base font-semibold tracking-wide shadow-xl flex items-center justify-center gap-3 text-gray-100 transition-colors"><span>Ver marcações</span><span id="marks-count-badge" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></button></div>
   </main>
 
-  <!-- MODAL MARCAÇÕES -->
   <div id="modal-marks" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex flex-col justify-end transition-opacity duration-300 opacity-0 pointer-events-none">
     <div class="marks-sheet flex flex-col">
       <div class="flex items-center gap-3 mb-5 pb-4 border-b border-[#29292d]"><div class="marks-heading-icon"><i class="fa-solid fa-scissors"></i></div><div class="min-w-0 flex-1"><h3 class="text-lg font-bold text-gray-100">Trechos Errados Marcados</h3><p class="text-xs text-gray-500 mt-0.5">Revise os cortes antes de exportar.</p></div><button id="btn-close-modal" class="w-10 h-10 rounded-xl bg-[#202024] text-gray-400 text-lg flex items-center justify-center" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button></div>
@@ -216,8 +211,6 @@
     </div>
   </div>
 
-
-  <!-- CONFIRMAÇÃO E PROGRESSO DE EXPORTAÇÃO DO PROJETO -->
   <div id="project-export-modal" class="hidden fixed inset-0 z-[120] bg-black/75 backdrop-blur-sm items-center justify-center p-5">
     <div class="modal-panel w-full max-w-sm p-6">
       <div class="w-12 h-12 rounded-2xl bg-[#202024] flex items-center justify-center mb-4 text-lg"><i class="fa-solid fa-file-export"></i></div>
@@ -295,8 +288,6 @@ function showScreen(name) {
   editorScreen.classList.toggle('is-active', name === 'editor');
 
   if (name === 'editor') {
-    // Espera a transição iniciar antes de recalcular o canvas, evitando que a
-    // primeira renderização da forma de onda apareça parcialmente desenhada.
     requestAnimationFrame(() => requestAnimationFrame(() => {
       resizeCanvases();
       drawWaveform();
@@ -315,7 +306,6 @@ function prettyDate(timestamp) {
 }
 async function refreshProjectsList() {
   const list = document.getElementById('projects-list');
-  const empty = document.getElementById('projects-empty');
   let projects = [];
   try { projects = await listProjects(); } catch (err) { console.error(err); }
   document.getElementById('projects-count').textContent = `${projects.length} ${projects.length === 1 ? 'projeto' : 'projetos'}`;
@@ -618,7 +608,6 @@ document.getElementById('create-project-form').addEventListener('submit', async 
         project.audioBlob = selectedNewAudio; project.audioName = selectedNewAudio.name; project.audioType = selectedNewAudio.type || 'application/octet-stream';
       }
       project.name = name; project.description = description; project.updatedAt = Date.now();
-      // Ao trocar o áudio, mantém marcações, seleção, zoom e pilhas de desfazer/refazer.
       if (!project.editState) project.editState = {marks:[],selectionStart:null,selectionEnd:null,isMarking:false,currentTime:0,zoomLevel:15,historyPast:[],historyFuture:[]};
       if (decoded && currentProjectId === project.id) {
         stopAudioPlayback(); originalAudioBlob = selectedNewAudio; originalAudioName = selectedNewAudio.name; currentProject = project;
@@ -734,7 +723,6 @@ window.addEventListener('load', async () => {
   resizeCanvases(); setupListeners(); startAutoSaveTimer(); requestAnimationFrame(renderLoop);
 });
 window.addEventListener('resize', resizeCanvases);
-// O salvamento automático ocorre a cada 30 segundos; o botão Voltar salva imediatamente.
 function getAudioContext() {
   if (!state.audioContext) { const AudioCtx=window.AudioContext||window.webkitAudioContext; if (!AudioCtx) throw new Error('Este navegador não oferece suporte à reprodução de áudio.'); state.audioContext=new AudioCtx(); }
   if (state.audioContext.state==='suspended') state.audioContext.resume().catch(console.error);
@@ -758,19 +746,70 @@ function updateLabels() {
   labelStartTime.textContent=formatTime(state.selectionStart!==null?state.selectionStart:state.currentTime);
   labelEndTime.textContent=formatTime(state.selectionEnd!==null?state.selectionEnd:Math.min(state.duration,state.currentTime+3));
 }
+
+/* ALTERAÇÃO: a régua usa a mesma janela temporal da forma de onda.
+   O tempo atual fica alinhado à linha branca central. */
 function drawRuler() {
-  const w=rulerCanvas.width,h=rulerCanvas.height; rulerCtx.clearRect(0,0,w,h); if (!w||!h||!state.duration) return;
-  rulerCtx.fillStyle='#777C85'; rulerCtx.strokeStyle='#29292d'; rulerCtx.font=`${10*(window.devicePixelRatio||1)}px monospace`;
-  const visibleDur=state.duration/state.zoomLevel;
-  const startT=Math.max(0,Math.min(state.duration-visibleDur,state.currentTime-visibleDur/2)), endT=Math.min(state.duration,startT+visibleDur);
-  let step=1,subStep=.2;
-  if(state.zoomLevel>100){step=.1;subStep=.01;}else if(state.zoomLevel>50){step=.2;subStep=.02;}else if(state.zoomLevel>20){step=.5;subStep=.1;}else if(state.zoomLevel>10){step=1;subStep=.2;}else if(state.zoomLevel>5){step=2;subStep=.5;}else{step=5;subStep=1;}
-  for(let t=Math.floor(startT/subStep)*subStep;t<=endT;t+=subStep){
-    const x=((t-startT)/visibleDur)*w; rulerCtx.beginPath();rulerCtx.moveTo(x,h);
-    if(Math.abs(t%step)<.001||Math.abs(t%step-step)<.001){rulerCtx.lineTo(x,h-10*(window.devicePixelRatio||1));rulerCtx.fillText(`${t.toFixed(state.zoomLevel>50?2:1)}s`,x+2,10*(window.devicePixelRatio||1));}
-    else rulerCtx.lineTo(x,h-4*(window.devicePixelRatio||1)); rulerCtx.stroke();
+  const w = rulerCanvas.width;
+  const h = rulerCanvas.height;
+
+  rulerCtx.clearRect(0, 0, w, h);
+  if (!w || !h || !state.duration) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  rulerCtx.fillStyle = '#777C85';
+  rulerCtx.strokeStyle = '#29292d';
+  rulerCtx.font = `${10 * dpr}px monospace`;
+
+  const visibleDur = state.duration / state.zoomLevel;
+  const startT = state.currentTime - visibleDur / 2;
+  const endT = startT + visibleDur;
+
+  let step = 1;
+  let subStep = 0.2;
+
+  if (state.zoomLevel > 100) {
+    step = 0.1; subStep = 0.01;
+  } else if (state.zoomLevel > 50) {
+    step = 0.2; subStep = 0.02;
+  } else if (state.zoomLevel > 20) {
+    step = 0.5; subStep = 0.1;
+  } else if (state.zoomLevel > 10) {
+    step = 1; subStep = 0.2;
+  } else if (state.zoomLevel > 5) {
+    step = 2; subStep = 0.5;
+  } else {
+    step = 5; subStep = 1;
+  }
+
+  const firstTick = Math.floor(startT / subStep) * subStep;
+
+  for (let t = firstTick; t <= endT; t += subStep) {
+    if (t < 0 || t > state.duration) continue;
+
+    const x = ((t - startT) / visibleDur) * w;
+    rulerCtx.beginPath();
+    rulerCtx.moveTo(x, h);
+
+    const isMajor =
+      Math.abs(t % step) < 0.001 ||
+      Math.abs(t % step - step) < 0.001;
+
+    if (isMajor) {
+      rulerCtx.lineTo(x, h - 10 * dpr);
+      rulerCtx.fillText(
+        `${t.toFixed(state.zoomLevel > 50 ? 2 : 1)}s`,
+        x + 2 * dpr,
+        10 * dpr
+      );
+    } else {
+      rulerCtx.lineTo(x, h - 4 * dpr);
+    }
+
+    rulerCtx.stroke();
   }
 }
+
 function buildWaveformCache() {
   if(!state.audioBuffer)return;const w=waveformCanvas.width,h=waveformCanvas.height;if(!w||!h)return;
   const marksKey=state.marks.map(m=>`${m.id}:${m.start}:${m.end}`).join('|');
@@ -786,15 +825,83 @@ function buildWaveformCache() {
     waveformCacheCtx.beginPath();if(typeof waveformCacheCtx.roundRect==='function')waveformCacheCtx.roundRect(x,y,Math.min(barWidth,cacheWidth-x),barH,2);else waveformCacheCtx.rect(x,y,Math.min(barWidth,cacheWidth-x),barH);waveformCacheCtx.fill();
   } waveformCacheKey=key;
 }
+
+/* ALTERAÇÃO: desenha apenas o trecho real do áudio que cabe na janela.
+   O espaço antes do segundo zero e depois do fim do áudio fica vazio. */
 function drawWaveform() {
-  const w=waveformCanvas.width,h=waveformCanvas.height;waveformCtx.clearRect(0,0,w,h);
-  const hasAudio=!!state.audioBuffer&&w>0&&h>0&&state.duration>0;waveformEmptyMessage.classList.toggle('hidden',hasAudio);
-  if(!hasAudio){removeMarkOverlay.classList.add('hidden');return;}buildWaveformCache();
-  const visibleDur=Math.min(state.duration,state.duration/state.zoomLevel),startT=Math.max(0,Math.min(Math.max(0,state.duration-visibleDur),state.currentTime-visibleDur/2));
-  const actualVisibleDur=Math.max(.000001,Math.min(visibleDur,state.duration-startT)),sourceX=(startT/state.duration)*waveformCache.width,sourceWidth=Math.min((actualVisibleDur/state.duration)*waveformCache.width,waveformCache.width-sourceX);
-  if(sourceWidth>0)waveformCtx.drawImage(waveformCache,sourceX,0,sourceWidth,h,0,0,w,h);
-  if(state.isMarking&&state.selectionStart!==null){const x=((state.selectionStart-startT)/actualVisibleDur)*w;if(x>=0&&x<=w){waveformCtx.beginPath();waveformCtx.arc(x,h/2,4*(window.devicePixelRatio||1),0,Math.PI*2);waveformCtx.fillStyle='#ef4444';waveformCtx.fill();}}
+  const w = waveformCanvas.width;
+  const h = waveformCanvas.height;
+
+  waveformCtx.clearRect(0, 0, w, h);
+
+  const hasAudio =
+    !!state.audioBuffer &&
+    w > 0 &&
+    h > 0 &&
+    state.duration > 0;
+
+  waveformEmptyMessage.classList.toggle('hidden', hasAudio);
+
+  if (!hasAudio) {
+    removeMarkOverlay.classList.add('hidden');
+    return;
+  }
+
+  buildWaveformCache();
+
+  const visibleDur = state.duration / state.zoomLevel;
+  const startT = state.currentTime - visibleDur / 2;
+  const endT = startT + visibleDur;
+
+  const clippedStart = Math.max(0, startT);
+  const clippedEnd = Math.min(state.duration, endT);
+
+  if (clippedEnd > clippedStart) {
+    const sourceX =
+      (clippedStart / state.duration) * waveformCache.width;
+
+    const sourceWidth =
+      ((clippedEnd - clippedStart) / state.duration) *
+      waveformCache.width;
+
+    const destinationX =
+      ((clippedStart - startT) / visibleDur) * w;
+
+    const destinationWidth =
+      ((clippedEnd - clippedStart) / visibleDur) * w;
+
+    waveformCtx.drawImage(
+      waveformCache,
+      sourceX,
+      0,
+      sourceWidth,
+      h,
+      destinationX,
+      0,
+      destinationWidth,
+      h
+    );
+  }
+
+  if (state.isMarking && state.selectionStart !== null) {
+    const x =
+      ((state.selectionStart - startT) / visibleDur) * w;
+
+    if (x >= 0 && x <= w) {
+      waveformCtx.beginPath();
+      waveformCtx.arc(
+        x,
+        h / 2,
+        4 * (window.devicePixelRatio || 1),
+        0,
+        Math.PI * 2
+      );
+      waveformCtx.fillStyle = '#ef4444';
+      waveformCtx.fill();
+    }
+  }
 }
+
 function renderLoop() {
   if(state.isPlaying){
     const actx=getAudioContext();state.currentTime=state.playbackOffset+(actx.currentTime-state.playbackStartTime);
@@ -855,17 +962,79 @@ function setupListeners() {
     if(e.target===removeMarkOverlay)return;activePointers.set(e.pointerId,e);tapCandidates.set(e.pointerId,{x:e.clientX,y:e.clientY,moved:false});
     if(activePointers.size===1){state.isDragging=true;state.dragStartX=e.clientX;}else if(activePointers.size===2){state.isDragging=false;const p=Array.from(activePointers.values());state.initialPinchDistance=Math.hypot(p[0].clientX-p[1].clientX,p[0].clientY-p[1].clientY);}
   }
+
+  /* ALTERAÇÃO: arrastar desloca a janela temporal sem prendê-la
+     às extremidades do áudio; o tempo atual permanece no centro. */
   function movePointer(e){
-    if(!activePointers.has(e.pointerId))return;activePointers.set(e.pointerId,e);const tap=tapCandidates.get(e.pointerId);if(tap&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>8)tap.moved=true;
-    if(activePointers.size===2&&state.initialPinchDistance){const p=Array.from(activePointers.values()),dist=Math.hypot(p[0].clientX-p[1].clientX,p[0].clientY-p[1].clientY),factor=dist/state.initialPinchDistance;state.zoomLevel=Math.max(1,Math.min(200,state.zoomLevel*factor));state.initialPinchDistance=dist;invalidateWaveformCache();drawWaveform();drawRuler();scheduleSave();}
-    else if(activePointers.size===1&&state.isDragging){const deltaX=e.clientX-state.dragStartX;state.dragStartX=e.clientX;const visibleDur=state.duration/state.zoomLevel,timeDelta=(deltaX/waveformWrapper.clientWidth)*visibleDur;state.currentTime=Math.max(0,Math.min(state.duration,state.currentTime-timeDelta));updateLabels();drawWaveform();drawRuler();if(state.isPlaying)startAudioPlayback();scheduleSave();}
-  }
-  function endPointer(e){
-    const tap=tapCandidates.get(e.pointerId),wasSinglePointer=activePointers.size===1;activePointers.delete(e.pointerId);tapCandidates.delete(e.pointerId);if(activePointers.size<2)state.initialPinchDistance=null;if(activePointers.size===0)state.isDragging=false;
-    if(tap&&!tap.moved&&wasSinglePointer&&state.audioBuffer){const rect=waveformWrapper.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,e.clientX-rect.left)),visibleDur=Math.min(state.duration,state.duration/state.zoomLevel),startT=Math.max(0,Math.min(Math.max(0,state.duration-visibleDur),state.currentTime-visibleDur/2)),tappedTime=startT+(x/Math.max(1,rect.width))*visibleDur,hitMark=state.marks.find(mark=>tappedTime>=mark.start&&tappedTime<=mark.end);
-      if(hitMark){removeMarkOverlay.dataset.markId=String(hitMark.id);removeMarkOverlay.style.left=`${Math.max(72,Math.min(rect.width-72,x))}px`;removeMarkOverlay.classList.remove('hidden');}else removeMarkOverlay.classList.add('hidden');
+    if(!activePointers.has(e.pointerId))return;
+    activePointers.set(e.pointerId,e);
+
+    const tap=tapCandidates.get(e.pointerId);
+    if(tap&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>8)tap.moved=true;
+
+    if(activePointers.size===2&&state.initialPinchDistance){
+      const p=Array.from(activePointers.values());
+      const dist=Math.hypot(p[0].clientX-p[1].clientX,p[0].clientY-p[1].clientY);
+      const factor=dist/state.initialPinchDistance;
+      state.zoomLevel=Math.max(1,Math.min(200,state.zoomLevel*factor));
+      state.initialPinchDistance=dist;
+      invalidateWaveformCache();drawWaveform();drawRuler();scheduleSave();
+    } else if(activePointers.size===1&&state.isDragging){
+      const deltaX=e.clientX-state.dragStartX;
+      state.dragStartX=e.clientX;
+
+      const visibleDur=state.duration/state.zoomLevel;
+      const wrapperWidth=Math.max(1,waveformWrapper.clientWidth);
+      const timeDelta=(deltaX/wrapperWidth)*visibleDur;
+
+      state.currentTime=Math.max(0,Math.min(state.duration,state.currentTime-timeDelta));
+
+      updateLabels();
+      drawWaveform();
+      drawRuler();
+
+      if(state.isPlaying)startAudioPlayback();
+      scheduleSave();
     }
   }
+
+  /* ALTERAÇÃO: o toque usa exatamente a mesma escala temporal da régua
+     e da forma de onda, incluindo a área vazia nas extremidades. */
+  function endPointer(e){
+    const tap=tapCandidates.get(e.pointerId);
+    const wasSinglePointer=activePointers.size===1;
+
+    activePointers.delete(e.pointerId);
+    tapCandidates.delete(e.pointerId);
+
+    if(activePointers.size<2)state.initialPinchDistance=null;
+    if(activePointers.size===0)state.isDragging=false;
+
+    if(tap&&!tap.moved&&wasSinglePointer&&state.audioBuffer){
+      const rect=waveformWrapper.getBoundingClientRect();
+      const x=Math.max(0,Math.min(rect.width,e.clientX-rect.left));
+      const visibleDur=state.duration/state.zoomLevel;
+      const startT=state.currentTime-visibleDur/2;
+
+      const tappedTime=
+        startT+
+        (x/Math.max(1,rect.width))*visibleDur;
+
+      const hitMark=state.marks.find(
+        mark=>tappedTime>=mark.start&&tappedTime<=mark.end
+      );
+
+      if(hitMark){
+        removeMarkOverlay.dataset.markId=String(hitMark.id);
+        removeMarkOverlay.style.left=
+          `${Math.max(72,Math.min(rect.width-72,x))}px`;
+        removeMarkOverlay.classList.remove('hidden');
+      }else{
+        removeMarkOverlay.classList.add('hidden');
+      }
+    }
+  }
+
   btnViewMarks.addEventListener('click',()=>{renderMarksList();modalMarks.classList.remove('opacity-0','pointer-events-none');});
   btnCloseModal.addEventListener('click',()=>modalMarks.classList.add('opacity-0','pointer-events-none'));
   modalMarks.addEventListener('click',e=>{if(e.target===modalMarks)modalMarks.classList.add('opacity-0','pointer-events-none');});
