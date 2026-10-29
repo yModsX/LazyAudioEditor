@@ -31,6 +31,8 @@ const LZ_TH=[['midnight','Meia-noite',{bg:'#050510',surf:'#12122a',tx:'#eef0ff',
 ['rose','Rosa',{bg:'#160a12',surf:'#2a1423',tx:'#ffeef7',mu:'#b88aa6',acc:'#ff4d9d'}],['graphite','Grafite',{bg:'#101112',surf:'#1c1e20',tx:'#f1f2f3',mu:'#8b9096',acc:'#9aa4b2'}],
 ['lavender','Lavanda',{bg:'#f6f3ff',surf:'#ffffff',tx:'#1e1733',mu:'#7a6f99',acc:'#7c5cff'}],['mint','Menta',{bg:'#f0faf6',surf:'#ffffff',tx:'#10261d',mu:'#5f8575',acc:'#0fb88a'}]];
 const lzJ=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const LZ_AS_OPTS=[15,30,60,120,300,600];
+var lzAS=(()=>{const v=lzJ('lz-autosave',{on:true,sec:60});return{on:v.on!==false,sec:LZ_AS_OPTS.includes(+v.sec)?+v.sec:60}})();
 let lzTheme=lzJ('lz-theme',{mode:'dark',custom:{...LZ_P.dark}}),lzLang=lzJ('lz-lang','pt');
 const lzMix=(a,b,t)=>{const A=parseInt(a.slice(1),16),B=parseInt(b.slice(1),16);return '#'+[16,8,0].map(x=>Math.round(((A>>x)&255)*(1-t)+((B>>x)&255)*t).toString(16).padStart(2,'0')).join('');};
 const lzTok=n=>getComputedStyle(document.documentElement).getPropertyValue('--'+n).trim(),lzLum=h=>{const n=parseInt(h.slice(1),16);return((n>>16)*299+((n>>8&255)*587)+(n&255)*114)/1000},
@@ -57,7 +59,7 @@ button{position:relative}button::after{content:'';position:absolute;inset:0;bord
 </style>
 <style id="lz-home-car">
 .lz-carwrap{margin:0 -20px}
-.lz-car{--cw:min(64vw,264px);--gap:14px;position:relative;display:flex;align-items:center;gap:var(--gap);overflow-x:auto;overflow-y:hidden;padding:8px 0 14px;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x pan-y;scrollbar-width:none}
+.lz-car{--cw:min(64vw,264px);--gap:14px;position:relative;display:flex;align-items:center;gap:var(--gap);overflow-x:auto;overflow-y:hidden;padding:30px 0 34px;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x pan-y;scrollbar-width:none}
 .lz-car::-webkit-scrollbar{display:none}
 .lz-car::before,.lz-car::after{content:"";flex:none;width:max(0px,calc((100% - var(--cw))/2 - var(--gap)))}
 .lz-car.is-empty{display:block;overflow:visible;padding:0 20px;scroll-snap-type:none}
@@ -141,7 +143,7 @@ button{position:relative}button::after{content:'';position:absolute;inset:0;bord
 .lz-stage{flex:1;min-height:0;display:grid;grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(0,1fr);margin-top:6px}
 .lz-stage>*{min-width:0}
 .lz-stage>*{grid-area:1/1;transition:opacity .28s ease,transform .4s cubic-bezier(.22,.8,.25,1),visibility 0s}
-.lz-stage .lz-carwrap{margin:0 -20px;align-self:center}
+.lz-stage .lz-carwrap{margin:-22px -20px -20px;align-self:center}
 .lz-search{display:flex;align-items:center;margin:10px 0 4px}
 .lz-sbox{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:46px;padding:0 10px 0 14px;border-radius:999px;background:var(--surf);border:1px solid var(--line);color:var(--mu);transition:border-color .25s ease,box-shadow .25s ease}
 .lz-sbox:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent);color:var(--tx2)}
@@ -170,16 +172,58 @@ button{position:relative}button::after{content:'';position:absolute;inset:0;bord
 .lz-pk-star.pop .ic{animation:lzPop .55s cubic-bezier(.22,1.4,.4,1)}
 @keyframes lzPop{0%{transform:scale(.4) rotate(-30deg)}60%{transform:scale(1.4) rotate(8deg)}100%{transform:none}}
 .lz-car{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.lz-car.dragging{scroll-snap-type:none;scroll-behavior:auto;touch-action:none;cursor:grabbing}
+.lz-car.dragging{overflow-x:hidden;scroll-snap-type:none;scroll-behavior:auto;touch-action:none;cursor:grabbing}
 .lz-car.dragging .lz-pk{transition:translate .28s cubic-bezier(.22,.8,.25,1)}
-.lz-car.dragging .lz-pk.lift{transition:none;opacity:1;scale:1.07;z-index:6;box-shadow:0 0 0 2px var(--acc)}
+.lz-car.dragging .lz-pk.lift{transition:none;opacity:1;scale:1.05;z-index:6;box-shadow:0 0 0 2px var(--acc)}
 .lz-pk.settle{transition:translate .26s cubic-bezier(.22,.8,.25,1),scale .26s ease}
 @media (prefers-reduced-motion:reduce){.lz-sr,.lz-pk-star.pop .ic{animation:none}.lz-stage>*,.lz-slist,.lz-qcancel,.lz-dock{transition:none}}
+
+/* ===== Configurações em lista: cada categoria abre uma página ===== */
+.lz-menu+.lz-menu{margin-top:12px}
+.lz-mrow{position:relative;display:flex;align-items:center;gap:16px;width:100%;padding:12px 16px;text-align:left;--press:var(--press-soft);transition:background-color .15s ease}
+.lz-mrow:active{background:var(--press-soft)}
+.lz-mrow+.lz-mrow::before{content:'';position:absolute;top:0;left:72px;right:0;border-top:1px solid var(--line)}
+.lz-mic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:none;color:var(--on-mk);background:linear-gradient(180deg,color-mix(in srgb,var(--c) 80%,var(--on-mk)),var(--c))}
+.lz-mic .ic{width:23px;height:23px}
+.lz-mrow .lz-lg{flex:1;min-width:0;gap:2px;line-height:1.3}
+.lz-mrow .lz-lg b{font-size:16px;font-weight:600;color:var(--tx)}
+.lz-mrow .lz-lg small{font-size:13px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lz-ctr{text-align:center}
+.lz-srow{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;cursor:pointer}
+.lz-srow .lz-lg{flex:1;min-width:0}
+.lz-srow .lz-lg b{font-size:15px;font-weight:600}
+.lz-srow .lz-lg small{line-height:1.35}
+.lz-sep{border-top:1px solid var(--line);cursor:default}
+#lz-as-int.is-off{opacity:.45;pointer-events:none}
+#lz-as-int .lz-lg b{font-weight:500}#lz-as-int .lz-lg b span{font-weight:inherit}
+.lz-dn{position:relative;width:200px;height:200px;margin:10px auto 6px}
+.lz-dn svg{width:100%;height:100%;transform:rotate(-90deg)}
+.lz-dn circle{fill:none;stroke-width:15}
+.lz-dn-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;padding:0 38px;text-align:center}
+.lz-dn-c b{font-size:26px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lz-dn-c small{font-size:12px;color:var(--mu);margin-top:2px}
+.lz-h2row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.lz-linkbtn{font-size:13px;font-weight:600;color:var(--acc);padding:6px 4px;margin:0 4px 2px;border-radius:8px}
+.lz-linkbtn:disabled{opacity:.4}
+.lz-sp{display:flex;align-items:center;gap:14px;width:100%;padding:13px 16px;text-align:left}
+.lz-sp+.lz-sp{border-top:1px solid var(--line)}
+.lz-ck{width:26px;height:26px;border-radius:50%;border:2px solid var(--c);display:grid;place-items:center;flex:none;color:var(--on-mk);transition:background .15s}
+.lz-ck .ic{width:15px;height:15px;stroke-width:3;opacity:0;transition:opacity .15s}
+.lz-sp.on .lz-ck{background:var(--c)}.lz-sp.on .lz-ck .ic{opacity:1}
+.lz-sp-n{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lz-sp-n b{font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lz-sp-n small{font-size:12px;color:var(--mu)}
+.lz-sp-s{font-size:14px;color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lz-stor-del{margin-top:12px}
+.lz-stor-del b{font-weight:700}
+.lz-about{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:18px 12px 22px}
+.lz-about .lz-tile.lg{margin-bottom:6px}
 </style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute"><defs>
 <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 7h16M7 12h10M10 17h4"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
 <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 20h16"/></symbol>
 <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
@@ -225,7 +269,7 @@ button{position:relative}button::after{content:'';position:absolute;inset:0;bord
     <button type="button" id="lz-pick" class="lz-drop"><span class="lz-tile"><svg class="ic"><use href="#i-wave"/></svg></span><b id="lz-pick-t">Escolher áudio</b><small id="lz-pick-s">MP3, WAV e outros formatos</small></button>
     <div id="lz-nname-w" class="hidden lz-nname"><label class="lz-lbl" for="lz-newname">Nome do projeto</label><input id="lz-newname" class="lz-in" maxlength="100" autocomplete="off"></div>
     <button type="button" id="lz-create-go" class="lz-btn lz-btn-pri lz-go" disabled><svg class="ic xs"><use href="#i-folder-plus"/></svg> Criar e abrir editor</button>
-    <button type="button" id="btn-import-project-json-top" class="lz-hrow lz-imp"><span class="lz-tile"><svg class="ic"><use href="#i-upload"/></svg></span>Importar projeto (.json)</button>
+    <button type="button" id="btn-import-project-json-top" class="lz-hrow lz-imp"><span class="lz-tile"><svg class="ic"><use href="#i-upload"/></svg></span>Importar projeto (.zip)</button>
   </div>
   <div id="lz-psheet" class="lz-hs" role="dialog" aria-modal="true">
     <div class="lz-hs-gh"><div class="lz-hs-grab"></div></div>
@@ -240,24 +284,78 @@ button{position:relative}button::after{content:'';position:absolute;inset:0;bord
   <section id="settings-screen" class="screen lz-set">
     <header class="lz-sethead"><button id="btn-settings-back" aria-label="Voltar"><svg class="ic"><use href="#i-back"/></svg></button><h1>Configurações</h1></header>
     <div class="lz-setbody">
-      <h2 class="lz-h">Tema</h2>
-      <div class="lz-ths" id="lz-ths"></div>
-      <div id="lz-custom" class="lz-card" style="display:none"><h3 class="lz-sub">Cor de destaque</h3><div id="lz-accs" class="lz-accs"></div><h3 class="lz-sub">Esquema de cores</h3><div id="lz-roles"></div><button id="lz-reset" class="lz-btn lz-btn-sec lz-full" style="margin-top:12px">Redefinir cores</button></div>
-      <h2 class="lz-h">Estilo da waveform</h2>
-      <div class="lz-card lz-wfs" id="lz-wfs"><button class="lz-wfo" data-wf="bars"><svg class="ic"><use href="#i-wf-bars"/></svg>Barras</button><button class="lz-wfo" data-wf="line"><svg class="ic"><use href="#i-wf-line"/></svg>Linha</button><button class="lz-wfo" data-wf="mirror"><svg class="ic"><use href="#i-wf-mirror"/></svg>Espelhada</button></div>
-      <h2 class="lz-h">Idioma</h2>
-      <input id="lz-lang-q" class="lz-in" placeholder="Pesquisar idioma" autocomplete="off" style="margin-bottom:10px">
-      <div id="lz-lang-list" class="lz-card"></div>
-      <div class="lz-langact"><button id="lz-lang-export" class="lz-btn lz-btn-sec"><svg class="ic"><use href="#i-down"/></svg>Exportar português</button><button id="lz-lang-import" class="lz-btn lz-btn-sec"><svg class="ic"><use href="#i-upload"/></svg>Importar idioma</button></div>
-      <p class="lz-note">Exporte o português, traduza os textos do arquivo JSON e importe de volta.</p><h2 class="lz-h">Armazenamento</h2>
-      <div class="lz-card lz-pad lz-col" id="lz-store">
-        <div><div class="lz-prog-row"><span class="c-tx2" id="lz-store-txt">…</span><span class="c-tx" id="lz-store-pct"></span></div><div class="lz-track lz-mt"><div id="lz-store-bar" class="lz-fill"></div></div></div>
-        <p class="lz-tm" id="lz-store-state"></p>
-        <button type="button" id="lz-store-btn" class="lz-btn lz-btn-sec lz-full"><svg class="ic"><use href="#i-drive"/></svg>Solicitar mais armazenamento</button>
-        <p class="lz-tm">Pede ao navegador para reservar o espaço do app e não apagar seus projetos quando faltar memória.</p>
+      <div class="lz-card lz-menu">
+      <button type="button" class="lz-mrow" data-sopen="general" style="--c:var(--mk-4)"><span class="lz-mic"><svg class="ic"><use href="#i-sliders"/></svg></span><span class="lz-lg"><b>Geral</b><small>Salvamento automático, Intervalo</small></span></button>
+      <button type="button" class="lz-mrow" data-sopen="themes" style="--c:var(--mk-5)"><span class="lz-mic"><svg class="ic"><use href="#i-palette"/></svg></span><span class="lz-lg"><b>Temas</b><small>Cores do app, Estilo das ondas</small></span></button>
+      <button type="button" class="lz-mrow" data-sopen="language" style="--c:var(--mk-3)"><span class="lz-mic"><svg class="ic"><use href="#i-globe"/></svg></span><span class="lz-lg"><b>Idioma</b><small id="lz-lang-cur">Português (Brasil)</small></span></button>
+      <button type="button" class="lz-mrow" data-sopen="storage" style="--c:var(--mk-2)"><span class="lz-mic"><svg class="ic"><use href="#i-drive"/></svg></span><span class="lz-lg"><b>Armazenamento</b><small>Uso por projeto, Espaço do dispositivo</small></span></button>
       </div>
-      <input type="file" id="lz-lang-file" accept=".json,application/json" style="display:none">
+      <div class="lz-card lz-menu">
+      <button type="button" class="lz-mrow" data-sopen="about" style="--c:var(--mu)"><span class="lz-mic"><svg class="ic"><use href="#i-info"/></svg></span><span class="lz-lg"><b>Sobre</b><small>Versão, Seus dados</small></span></button>
+      </div>
     </div>
+  <div id="sp-general" class="lz-page" role="dialog" aria-label="Geral">
+    <header class="lz-sethead"><button type="button" data-sclose aria-label="Voltar"><svg class="ic"><use href="#i-back"/></svg></button><h1>Geral</h1></header>
+    <div class="lz-setbody">
+        <h2 class="lz-h">Projeto</h2>
+        <div class="lz-card">
+          <label class="lz-srow" for="lz-as-on"><span class="lz-lg"><b>Salvamento automático</b><small>Salva o projeto sozinho enquanto você edita.</small></span><input type="checkbox" id="lz-as-on" class="lz-sw2" role="switch" aria-label="Salvamento automático"></label>
+        </div>
+        <h2 class="lz-h">Intervalo de salvamento</h2>
+        <div class="lz-card" id="lz-as-int"></div>
+        <p class="lz-note">Com o salvamento automático desligado, o projeto só é salvo quando você volta para a tela inicial.</p>
+    </div>
+  </div>
+  <div id="sp-themes" class="lz-page" role="dialog" aria-label="Temas">
+    <header class="lz-sethead"><button type="button" data-sclose aria-label="Voltar"><svg class="ic"><use href="#i-back"/></svg></button><h1>Temas</h1></header>
+    <div class="lz-setbody">
+        <h2 class="lz-h">Cores do app</h2>
+        <div class="lz-ths" id="lz-ths"></div>
+        <div id="lz-custom" class="lz-card" style="display:none"><h3 class="lz-sub">Cor de destaque</h3><div id="lz-accs" class="lz-accs"></div><h3 class="lz-sub">Esquema de cores</h3><div id="lz-roles"></div><button id="lz-reset" class="lz-btn lz-btn-sec lz-full" style="margin-top:12px">Redefinir cores</button></div>
+        <h2 class="lz-h">Estilo das ondas</h2>
+        <div class="lz-card lz-wfs" id="lz-wfs"><button class="lz-wfo" data-wf="bars"><svg class="ic"><use href="#i-wf-bars"/></svg>Barras</button><button class="lz-wfo" data-wf="line"><svg class="ic"><use href="#i-wf-line"/></svg>Linha</button><button class="lz-wfo" data-wf="mirror"><svg class="ic"><use href="#i-wf-mirror"/></svg>Espelhada</button></div>
+    </div>
+  </div>
+  <div id="sp-language" class="lz-page" role="dialog" aria-label="Idioma">
+    <header class="lz-sethead"><button type="button" data-sclose aria-label="Voltar"><svg class="ic"><use href="#i-back"/></svg></button><h1>Idioma</h1></header>
+    <div class="lz-setbody">
+        <h2 class="lz-h">Idioma</h2>
+        <input id="lz-lang-q" class="lz-in" placeholder="Pesquisar idioma" autocomplete="off" style="margin-bottom:10px">
+        <div id="lz-lang-list" class="lz-card"></div>
+        <div class="lz-langact"><button id="lz-lang-export" class="lz-btn lz-btn-sec"><svg class="ic"><use href="#i-down"/></svg>Exportar português</button><button id="lz-lang-import" class="lz-btn lz-btn-sec"><svg class="ic"><use href="#i-upload"/></svg>Importar idioma</button></div>
+        <p class="lz-note">Exporte o português, traduza os textos do arquivo JSON e importe de volta.</p>
+        <input type="file" id="lz-lang-file" accept=".json,application/json" style="display:none">
+    </div>
+  </div>
+  <div id="sp-storage" class="lz-page" role="dialog" aria-label="Armazenamento">
+    <header class="lz-sethead"><button type="button" data-sclose aria-label="Voltar"><svg class="ic"><use href="#i-back"/></svg></button><h1>Armazenamento</h1></header>
+    <div class="lz-setbody">
+        <div class="lz-dn"><svg viewBox="0 0 120 120" aria-hidden="true"><g id="lz-dn-seg"></g></svg><div class="lz-dn-c"><b id="lz-dn-tot">0 KB</b><small id="lz-dn-sub"></small></div></div>
+        <h3 class="lz-t2 lz-ctr">Uso do armazenamento</h3>
+        <p class="lz-sub lz-ctr" id="lz-stor-sum"></p>
+        <div class="lz-h2row"><h2 class="lz-h">Projetos</h2><button type="button" id="lz-stor-all" class="lz-linkbtn">Selecionar todos</button></div>
+        <div class="lz-card" id="lz-stor-list"></div>
+        <button type="button" id="lz-stor-del" class="lz-btn lz-btn-danger lz-full lz-stor-del" disabled><svg class="ic"><use href="#i-trash"/></svg><span>Excluir selecionados</span><b id="lz-stor-del-sz"></b></button>
+        <p class="lz-note">Os projetos excluídos não podem ser recuperados.</p>
+        <h2 class="lz-h">Armazenamento do dispositivo</h2>
+        <div class="lz-card lz-pad lz-col" id="lz-store">
+          <div><div class="lz-prog-row"><span class="c-tx2" id="lz-store-txt">…</span><span class="c-tx" id="lz-store-pct"></span></div><div class="lz-track lz-mt"><div id="lz-store-bar" class="lz-fill"></div></div></div>
+          <p class="lz-tm" id="lz-store-state"></p>
+          <button type="button" id="lz-store-btn" class="lz-btn lz-btn-sec lz-full"><svg class="ic"><use href="#i-drive"/></svg>Solicitar mais armazenamento</button>
+          <p class="lz-tm">Pede ao navegador para reservar o espaço do app e não apagar seus projetos quando faltar memória.</p>
+        </div>
+    </div>
+  </div>
+  <div id="sp-about" class="lz-page" role="dialog" aria-label="Sobre">
+    <header class="lz-sethead"><button type="button" data-sclose aria-label="Voltar"><svg class="ic"><use href="#i-back"/></svg></button><h1>Sobre</h1></header>
+    <div class="lz-setbody">
+        <div class="lz-about"><span class="lz-tile lg"><svg class="ic"><use href="#i-wave"/></svg></span><h2 class="lz-logo">Lazy <span class="lz-grad">Editor</span></h2><p class="lz-sub">Importe um áudio, marque os trechos indesejados e exporte limpo.</p></div>
+        <div class="lz-card">
+          <div class="lz-srow"><span class="lz-lg"><b>Versão</b></span><span class="lz-tm" id="lz-ver"></span></div>
+          <div class="lz-srow lz-sep"><span class="lz-lg"><b>Seus dados</b><small>Os projetos ficam salvos apenas neste dispositivo.</small></span></div>
+        </div>
+    </div>
+  </div>
   </section>
   <section id="create-project-screen" class="screen lz-scrollpage">
     <div class="lz-narrow">
@@ -280,7 +378,7 @@ button{position:relative}button::after{content:'';position:absolute;inset:0;bord
   <main id="editor-screen" class="screen lz-ed">
     <header class="lz-top"><button id="btn-back-home" title="Meus projetos" aria-label="Meus projetos"><svg class="ic "><use href="#i-back"/></svg></button><div><h1>Editor</h1><p id="editor-project-title">Lazy Editor</p><p id="editor-project-subtitle" style="display:none">Projeto local</p></div></header>
     <div class="lz-bar"><button id="btn-undo" class="lz-sq" title="Desfazer" aria-label="Desfazer" disabled><svg class="ic "><use href="#i-undo"/></svg></button><button id="btn-redo" class="lz-sq" title="Refazer" aria-label="Refazer" disabled><svg class="ic "><use href="#i-redo"/></svg></button><button id="btn-save-project" class="lz-btn lz-btn-pri lz-save" title="Exportar áudio"><svg class="ic"><use href="#i-upload"/></svg>Exportar</button></div>
-    <input type="file" id="audio-file-input" accept="audio/*" style="display:none"><input type="file" id="project-json-input" accept=".json,application/json" style="display:none">
+    <input type="file" id="audio-file-input" accept="audio/*" style="display:none"><input type="file" id="project-json-input" accept=".zip,.json,application/zip,application/json" style="display:none">
     <div class="lz-stats">
       <div class="lz-stat"><span id="label-start-time">00:00.00</span><small><button id="btn-sub-start" title="-10ms"><svg class="ic "><use href="#i-minus"/></svg></button>Início<button id="btn-add-start" title="+10ms"><svg class="ic "><use href="#i-plus"/></svg></button></small></div>
       <div class="lz-stat c"><span id="label-total-time">00:00.00</span><small>Total</small></div>
@@ -368,7 +466,7 @@ button{position:relative}button::after{content:'';position:absolute;inset:0;bord
     <div class="lz-dialog">
       <span class="lz-tile lg"><svg class="ic"><use href="#i-upload"/></svg></span>
       <h2 class="lz-t2" id="project-export-title">Exportar projeto</h2>
-      <p id="project-export-description" class="lz-ts">O arquivo incluirá o áudio original, as marcações e o histórico de desfazer/refazer. Como contém o áudio, o JSON pode ficar grande.</p>
+      <p id="project-export-description" class="lz-ts">O ZIP incluirá o áudio original, as marcações e as informações do projeto. Como contém o áudio, o arquivo pode ficar grande.</p>
       <div id="project-export-progress-wrap" class="hidden lz-prog"><div class="lz-prog-row"><span id="project-export-status" class="c-tx2">Preparando arquivo…</span><span id="project-export-percent" class="c-tx">0%</span></div><div class="lz-track"><div id="project-export-progress" class="lz-fill"></div></div></div>
       <div id="project-export-actions" class="lz-btns"><button id="btn-cancel-project-export" class="lz-btn lz-btn-sec">Cancelar</button><button id="btn-confirm-project-export" class="lz-btn lz-btn-pri">Confirmar</button></div>
       <button id="btn-close-project-export" class="hidden lz-btn lz-btn-sec lz-full lz-mt">Fechar</button>
@@ -565,7 +663,7 @@ function lzCarUpdate(){lzCarRaf=0;const c=document.getElementById('projects-list
 (function(){const c=document.getElementById('projects-list');
   c.addEventListener('scroll',()=>{if(!lzCarRaf)lzCarRaf=requestAnimationFrame(lzCarUpdate);},{passive:true});
   window.addEventListener('resize',()=>{lzCarMeasure();lzCarUpdate();});
-  c.addEventListener('click',e=>{if(performance.now()-lzDrag.swallow<350)return;const st=e.target.closest('.lz-pk-star');if(st){lzToggleFav(st.closest('.lz-pk').dataset.id);return;}const k=e.target.closest('.lz-pk');if(!k)return;const i=+k.dataset.i;if(i===lzCarActive)openProject(k.dataset.id);else lzCarGo(i);});
+  c.addEventListener('click',e=>{if(performance.now()-lzDrag.swallow<350)return;const k=e.target.closest('.lz-pk');if(!k)return;const i=+k.dataset.i;if(i===lzCarActive)openProject(k.dataset.id);else lzCarGo(i);});
   c.addEventListener('keydown',e=>{const k=e.target.closest('.lz-pk');if(!k)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();k.click();}else if(e.key==='ArrowRight')lzCarGo(lzCarActive+1);else if(e.key==='ArrowLeft')lzCarGo(lzCarActive-1);});
   document.getElementById('lz-dots').addEventListener('click',e=>{const d=e.target.closest('.lz-dot');if(d)lzCarGo(+d.dataset.i);});
   document.getElementById('lz-continue').addEventListener('click',()=>{const p=lzCarProjects[lzCarActive];if(p)openProject(p.id);});
@@ -633,13 +731,17 @@ async function lzDragEnd(cancel){const d=lzDrag,c=document.getElementById('proje
   for(const p of arr){if(p.id===lzFavId)continue;if(p.order!==o){const fp=await getProject(p.id);if(fp){fp.order=o;await putProject(fp);if(currentProjectId===fp.id&&currentProject)currentProject.order=o;}}o++;}
   lzHomeId=d.id;await refreshProjectsList();}
 (function(){const c=document.getElementById('projects-list'),d=lzDrag,stop=()=>{clearTimeout(d.timer);d.timer=0;};
+  const arm=(h,x,y)=>{d.x0=x;d.y0=y;stop();d.timer=setTimeout(()=>lzDragStart(h[0],h[1]),380);};
+  const cand=e=>{if(lzSearching)return null;const k=e.target.closest('.lz-pk');if(!k||lzCarProjects.length<2)return null;const i=+k.dataset.i;return lzCarProjects[i].id===lzFavId?null:[k,i];};
   c.addEventListener('contextmenu',e=>{if(e.target.closest('.lz-pk'))e.preventDefault();});
-  c.addEventListener('touchmove',e=>{if(d.on&&e.cancelable)e.preventDefault();},{passive:false});
-  c.addEventListener('pointerdown',e=>{if((e.pointerType==='mouse'&&e.button!==0)||lzSearching||e.target.closest('.lz-pk-star'))return;const k=e.target.closest('.lz-pk');if(!k||lzCarProjects.length<2)return;const i=+k.dataset.i;if(lzCarProjects[i].id===lzFavId)return;
-    d.x0=e.clientX;d.y0=e.clientY;d.pid=e.pointerId;stop();d.timer=setTimeout(()=>lzDragStart(k,i),420);});
-  c.addEventListener('pointermove',e=>{if(d.on){d.px=e.clientX;return;}if(d.timer&&(Math.abs(e.clientX-d.x0)>9||Math.abs(e.clientY-d.y0)>9))stop();});
-  c.addEventListener('pointerup',()=>{stop();if(d.on)lzDragEnd();});
-  c.addEventListener('pointercancel',()=>{stop();if(d.on)lzDragEnd(true);});})();
+  c.addEventListener('touchstart',e=>{if(e.touches.length!==1){if(!d.on)stop();return;}const h=cand(e);if(h)arm(h,e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+  c.addEventListener('touchmove',e=>{const t=e.touches[0];if(!t)return;if(d.on){d.px=t.clientX;if(e.cancelable)e.preventDefault();return;}if(d.timer&&(Math.abs(t.clientX-d.x0)>6||Math.abs(t.clientY-d.y0)>6))stop();},{passive:false});
+  const tend=()=>{stop();if(d.on)lzDragEnd();};
+  c.addEventListener('touchend',tend);c.addEventListener('touchcancel',tend);
+  c.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;const h=cand(e);if(h){d.pid=e.pointerId;arm(h,e.clientX,e.clientY);}});
+  c.addEventListener('pointermove',e=>{if(e.pointerType!=='mouse')return;if(d.on){d.px=e.clientX;return;}if(d.timer&&(Math.abs(e.clientX-d.x0)>9||Math.abs(e.clientY-d.y0)>9))stop();});
+  c.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')return;stop();if(d.on)lzDragEnd();});
+  c.addEventListener('pointercancel',e=>{if(e.pointerType!=='mouse')return;stop();if(d.on)lzDragEnd(true);});})();
 const lzNorm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 function lzSearchRender(){const q=lzNorm(document.getElementById('lz-q').value.trim()),list=lzCarProjects.filter(p=>!q||lzNorm(p.name).includes(q)),el=document.getElementById('lz-slist');
   if(!list.length){el.innerHTML=`<div class="lz-sempty"><b>${escapeHTML(lzT('Nenhum projeto encontrado'))}</b><small>${escapeHTML(lzT('Tente buscar por outro nome.'))}</small></div>`;return;}
@@ -669,7 +771,7 @@ async function refreshProjectsList() {
   list.innerHTML = projects.map((p, i) => {
     const marks = (p.editState && p.editState.marks && p.editState.marks.length) || 0;
     const fv = p.id === lzFavId;
-    return `<article class="lz-pk${fv ? ' fav' : ''}" role="button" tabindex="0" data-i="${i}" data-id="${escapeHTML(p.id)}" aria-label="${escapeHTML(p.name)}"><div class="lz-pk-top"><span class="lz-tile"><svg class="ic"><use href="#i-wave"/></svg></span><div class="lz-pk-tr">${marks ? `<span class="lz-pk-chip"><svg class="ic xs"><use href="#i-pin"/></svg>${marks}</span>` : ''}<button type="button" class="lz-pk-star${fv ? ' on' : ''}${fv && p.id === lzPopId ? ' pop' : ''}" aria-label="${escapeHTML(lzT(fv ? 'Remover dos favoritos' : 'Favoritar projeto'))}" aria-pressed="${fv}"><svg class="ic"><use href="#i-star"/></svg></button></div></div>${lzPkWave(p.id)}<span class="lz-pc-txt"><b>${escapeHTML(p.name)}</b><small>${escapeHTML(prettyDate(p.updatedAt || p.createdAt))}</small></span></article>`;
+    return `<article class="lz-pk${fv ? ' fav' : ''}" role="button" tabindex="0" data-i="${i}" data-id="${escapeHTML(p.id)}" aria-label="${escapeHTML(p.name)}"><div class="lz-pk-top"><span class="lz-tile"><svg class="ic"><use href="#i-wave"/></svg></span><div class="lz-pk-tr">${marks ? `<span class="lz-pk-chip"><svg class="ic xs"><use href="#i-pin"/></svg>${marks}</span>` : ''}${fv ? `<span class="lz-pk-star on${p.id === lzPopId ? ' pop' : ''}" role="img" aria-label="${escapeHTML(lzT('Favorito'))}"><svg class="ic"><use href="#i-star"/></svg></span>` : ''}</div></div>${lzPkWave(p.id)}<span class="lz-pc-txt"><b>${escapeHTML(p.name)}</b><small>${escapeHTML(prettyDate(p.updatedAt || p.createdAt))}</small></span></article>`;
   }).join('');
   if (projects.length <= 7) dots.innerHTML = projects.map((_, i) => `<button type="button" class="lz-dot" data-i="${i}" aria-label="${i + 1}"></button>`).join('');
   lzPopId = null;
@@ -721,10 +823,11 @@ function scheduleSave() {
   setSaveIndicator('Alterações pendentes');
 }
 function startAutoSaveTimer() {
-  if (saveIntervalId) clearInterval(saveIntervalId);
+  if (saveIntervalId) { clearInterval(saveIntervalId); saveIntervalId = null; }
+  if (!lzAS.on) return;
   saveIntervalId = setInterval(() => {
     if (saveDirty && !saveInProgress && currentProjectId) saveCurrentProjectNow(false);
-  }, 60000);
+  }, lzAS.sec * 1000);
 }
 function setSaveIndicator(text) {
   const subtitle = document.getElementById('editor-project-subtitle');
@@ -825,31 +928,58 @@ function dataURLToBlob(dataURL) {
   for (let i=0;i<raw.length;i++) arr[i] = raw.charCodeAt(i);
   return new Blob([arr], {type:mime});
 }
-async function exportProjectJSON(id = currentProjectId) {
+/* ===== ZIP do projeto: manifest.json, project-info.json, marks.json e audio/ (sem compressão: o áudio já é comprimido) ===== */
+const LZ_CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+async function lzCrcBlob(blob,onP){let crc=-1;const CH=4<<20;for(let i=0;i<blob.size;i+=CH){const u=new Uint8Array(await blob.slice(i,i+CH).arrayBuffer());for(let j=0;j<u.length;j++)crc=LZ_CRC[(crc^u[j])&255]^(crc>>>8);if(onP)onP(Math.min(1,(i+CH)/blob.size));}return(crc^-1)>>>0;}
+async function lzZipBuild(entries,onP){
+  const enc=new TextEncoder(),parts=[],central=[],now=new Date(),dt=(now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1),dd=((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate();let off=0;
+  for(const e of entries){const data=typeof e.data==='string'?new Blob([enc.encode(e.data)]):e.data,size=data.size;if(size>0xFFFFFFFE||off>0xFFFFFFFE)throw new Error('Arquivo grande demais para ZIP.');
+    const crc=await lzCrcBlob(data,e.progress&&(f=>onP&&onP(f))),nm=enc.encode(e.name);
+    const lh=new DataView(new ArrayBuffer(30));lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(10,dt,true);lh.setUint16(12,dd,true);lh.setUint32(14,crc,true);lh.setUint32(18,size,true);lh.setUint32(22,size,true);lh.setUint16(26,nm.length,true);
+    parts.push(lh.buffer,nm,data);
+    const ch=new DataView(new ArrayBuffer(46));ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(12,dt,true);ch.setUint16(14,dd,true);ch.setUint32(16,crc,true);ch.setUint32(20,size,true);ch.setUint32(24,size,true);ch.setUint16(28,nm.length,true);ch.setUint32(42,off,true);
+    central.push(ch.buffer,nm);off+=30+nm.length+size;}
+  const cdSize=central.reduce((t,x)=>t+x.byteLength,0),end=new DataView(new ArrayBuffer(22));end.setUint32(0,0x06054b50,true);end.setUint16(8,entries.length,true);end.setUint16(10,entries.length,true);end.setUint32(12,cdSize,true);end.setUint32(16,off,true);
+  return new Blob([...parts,...central,end.buffer],{type:'application/zip'});}
+async function lzZipRead(file){
+  const tail=Math.min(file.size,65557),tb=new DataView(await file.slice(file.size-tail).arrayBuffer());let p=-1;
+  for(let i=tb.byteLength-22;i>=0;i--){if(tb.getUint32(i,true)===0x06054b50){p=i;break;}}if(p<0)throw new Error('ZIP inválido.');
+  const n=tb.getUint16(p+10,true),cdSize=tb.getUint32(p+12,true),cdOff=tb.getUint32(p+16,true);if(cdOff===0xFFFFFFFF||n===0xFFFF)throw new Error('ZIP64 não suportado.');
+  const cd=new DataView(await file.slice(cdOff,cdOff+cdSize).arrayBuffer()),dec=new TextDecoder(),map=new Map();let o=0;
+  for(let i=0;i<n;i++){if(cd.getUint32(o,true)!==0x02014b50)throw new Error('ZIP inválido.');const nl=cd.getUint16(o+28,true),el=cd.getUint16(o+30,true),cl=cd.getUint16(o+32,true);
+    map.set(dec.decode(new Uint8Array(cd.buffer,o+46,nl)),{method:cd.getUint16(o+10,true),csize:cd.getUint32(o+20,true),lo:cd.getUint32(o+42,true)});o+=46+nl+el+cl;}
+  const find=nm=>{if(map.has(nm))return nm;for(const k of map.keys())if(k.endsWith('/'+nm))return k;return null;};
+  const blob=async(name,type)=>{const e=map.get(name);if(!e)throw new Error('Arquivo ausente no ZIP: '+name);const lh=new DataView(await file.slice(e.lo,e.lo+30).arrayBuffer());if(lh.getUint32(0,true)!==0x04034b50)throw new Error('ZIP inválido.');
+    const st=e.lo+30+lh.getUint16(26,true)+lh.getUint16(28,true),raw=file.slice(st,st+e.csize);let out;
+    if(e.method===0)out=raw;else if(e.method===8&&typeof DecompressionStream!=='undefined')out=await new Response(raw.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();else throw new Error('Compressão do ZIP não suportada.');
+    return type?out.slice(0,out.size,type):out;};
+  return{names:[...map.keys()],find,blob,text:async nm=>(await blob(nm)).text()};}
+function lzAudioExt(name,type){const m=String(name||'').match(/\.([a-z0-9]{2,5})$/i);if(m)return m[1].toLowerCase();const t=String(type||'');return t.includes('mpeg')?'mp3':t.includes('wav')?'wav':t.includes('ogg')?'ogg':t.includes('flac')?'flac':t.includes('mp4')||t.includes('aac')?'m4a':t.includes('webm')?'webm':'audio';}
+async function exportProjectZip(id = currentProjectId) {
   const project = await getProject(id);
   if (!project) { lzAlert('Projeto não encontrado.'); return; }
   if (id === currentProjectId) { await saveCurrentProjectNow(); Object.assign(project, currentProject); }
   try {
     if (!project.audioBlob) throw new Error('O projeto não possui o áudio original.');
     updateProjectExportProgress(5, 'Preparando dados do projeto…');
-    const audioDataURL = await blobToDataURL(project.audioBlob, percent => updateProjectExportProgress(percent, 'Preparando áudio…'));
-    updateProjectExportProgress(97, 'Montando arquivo JSON…');
-    const data = {
-      format:'lazy-editor-project', version:1, exportedAt:new Date().toISOString(),
-      project:{
-        id:project.id, name:project.name, description:project.description,
-        createdAt:project.createdAt, updatedAt:project.updatedAt,
-        audioName:project.audioName, audioType:project.audioType || project.audioBlob.type,
-        audioDataURL,
-        editState:project.editState || {}
-      }
-    };
-    downloadBlob(new Blob([JSON.stringify(data)],{type:'application/json'}), `${safeBaseName(project.name)}.lazy-editor.json`);
+    const type = project.audioType || project.audioBlob.type || '', ext = lzAudioExt(project.audioName, type);
+    const audioFile = 'audio/' + (safeBaseName((project.audioName || 'original').replace(/\.[a-z0-9]{2,5}$/i, '')) || 'original') + '.' + ext, es = project.editState || {};
+    const info = { id: project.id, name: project.name, description: project.description || '', createdAt: project.createdAt, updatedAt: project.updatedAt, audioName: project.audioName || '', audioType: type, audioFile, audioSize: project.audioBlob.size };
+    const marks = { marks: es.marks || [], selectionStart: es.selectionStart ?? null, selectionEnd: es.selectionEnd ?? null, currentTime: es.currentTime || 0, zoomLevel: es.zoomLevel || 15 };
+    const manifest = { format: 'lazy-editor-project', version: 2, app: 'lazy-editor', exportedAt: new Date().toISOString(), files: { info: 'project-info.json', marks: 'marks.json', audio: audioFile } };
+    const zip = await lzZipBuild([
+      { name: 'manifest.json', data: JSON.stringify(manifest, null, 2) },
+      { name: 'project-info.json', data: JSON.stringify(info, null, 2) },
+      { name: 'marks.json', data: JSON.stringify(marks, null, 2) },
+      { name: audioFile, data: project.audioBlob, progress: true }
+    ], f => updateProjectExportProgress(8 + Math.round(f * 84), 'Empacotando áudio…'));
+    updateProjectExportProgress(97, 'Montando arquivo ZIP…');
+    downloadBlob(zip, `${safeBaseName(project.name)}.lazy.zip`);
     updateProjectExportProgress(100, 'Exportação concluída.');
     document.getElementById('project-export-title').textContent = 'Projeto exportado';
-    document.getElementById('project-export-description').textContent = 'O arquivo JSON foi gerado. Guarde-o para importar o projeto em outro dispositivo.';
+    document.getElementById('project-export-description').textContent = 'O arquivo ZIP foi gerado. Guarde-o para importar o projeto em outro dispositivo.';
     document.getElementById('btn-close-project-export').classList.remove('hidden');
-  } catch (err) { console.error(err); updateProjectExportProgress(0, 'Falha na exportação.'); lzAlert('Não foi possível exportar o projeto JSON. Verifique se há espaço disponível e tente novamente.'); closeProjectExportModal(); }
+  } catch (err) { console.error(err); updateProjectExportProgress(0, 'Falha na exportação.'); lzAlert('Não foi possível exportar o projeto. Verifique se há espaço disponível e tente novamente.'); closeProjectExportModal(); }
 }
 function updateProjectExportProgress(percent, status) {
   const safe = Math.max(0, Math.min(100, Number(percent) || 0));
@@ -860,7 +990,7 @@ function updateProjectExportProgress(percent, status) {
 function showProjectExportConfirmation(id) {
   pendingExportProjectId = id;
   document.getElementById('project-export-title').textContent = 'Exportar projeto';
-  document.getElementById('project-export-description').textContent = 'O arquivo incluirá o áudio original, as marcações e o histórico de desfazer/refazer. Como contém o áudio, o JSON pode ficar grande.';
+  document.getElementById('project-export-description').textContent = 'O ZIP incluirá o áudio original, as marcações e as informações do projeto. Como contém o áudio, o arquivo pode ficar grande.';
   document.getElementById('project-export-progress-wrap').classList.add('hidden');
   document.getElementById('project-export-actions').classList.remove('hidden');
   document.getElementById('btn-close-project-export').classList.add('hidden');
@@ -881,27 +1011,45 @@ document.getElementById('btn-confirm-project-export').addEventListener('click', 
   document.getElementById('project-export-progress-wrap').classList.remove('hidden');
   document.getElementById('project-export-actions').classList.add('hidden');
   document.getElementById('btn-confirm-project-export').disabled = true;
-  await exportProjectJSON(id);
+  await exportProjectZip(id);
 });
 
-async function importProjectJSON(file) {
+async function importProjectFile(file) {
   try {
-    const data = JSON.parse(await file.text());
-    if (data.format !== 'lazy-editor-project' || !data.project || !data.project.audioDataURL) throw new Error('Arquivo JSON não reconhecido ou sem áudio original.');
-    const p = data.project;
-    const blob = dataURLToBlob(p.audioDataURL);
-    const project = {
-      id: makeId(), name:String(p.name || 'Projeto importado').slice(0,100),
-      description:String(p.description || '').slice(0,500), createdAt:Date.now(), updatedAt:Date.now(),
-      audioName:String(p.audioName || 'audio-importado'), audioType:p.audioType || blob.type, audioBlob:blob,
-      editState:p.editState || {marks:[],selectionStart:null,selectionEnd:null,isMarking:false,currentTime:0,zoomLevel:15,historyPast:[],historyFuture:[]}
-    };
+    const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+    const isZip = head[0] === 0x50 && head[1] === 0x4b && head[2] === 3 && head[3] === 4;
+    let project;
+    if (isZip) {
+      const z = await lzZipRead(file), mf = z.find('manifest.json');
+      if (mf) { const m = JSON.parse(await z.text(mf)); if (m.format !== 'lazy-editor-project') throw new Error('ZIP não reconhecido.'); }
+      const inf = z.find('project-info.json'); if (!inf) throw new Error('project-info.json ausente.');
+      const info = JSON.parse(await z.text(inf)), mk = z.find('marks.json'), mj = mk ? JSON.parse(await z.text(mk)) : {};
+      const ap = (info.audioFile && z.find(info.audioFile)) || z.names.find(n => /(^|\/)audio\/[^/]+$/.test(n));
+      if (!ap) throw new Error('Áudio ausente no ZIP.');
+      const blob = await z.blob(ap, info.audioType || '');
+      project = {
+        id: makeId(), name: String(info.name || 'Projeto importado').slice(0, 100), description: String(info.description || '').slice(0, 500),
+        createdAt: Date.now(), updatedAt: Date.now(), audioName: String(info.audioName || ap.split('/').pop()), audioType: info.audioType || blob.type, audioBlob: blob,
+        editState: { marks: Array.isArray(mj.marks) ? mj.marks : [], selectionStart: mj.selectionStart ?? null, selectionEnd: mj.selectionEnd ?? null, isMarking: false, currentTime: Number(mj.currentTime) || 0, zoomLevel: Number(mj.zoomLevel) || 15, historyPast: [], historyFuture: [] }
+      };
+    } else {
+      /* formato antigo (.json com o áudio em base64) continua sendo aceito */
+      const data = JSON.parse(await file.text());
+      if (data.format !== 'lazy-editor-project' || !data.project || !data.project.audioDataURL) throw new Error('Arquivo não reconhecido ou sem áudio original.');
+      const p = data.project, blob = dataURLToBlob(p.audioDataURL);
+      project = {
+        id: makeId(), name: String(p.name || 'Projeto importado').slice(0, 100),
+        description: String(p.description || '').slice(0, 500), createdAt: Date.now(), updatedAt: Date.now(),
+        audioName: String(p.audioName || 'audio-importado'), audioType: p.audioType || blob.type, audioBlob: blob,
+        editState: p.editState || { marks: [], selectionStart: null, selectionEnd: null, isMarking: false, currentTime: 0, zoomLevel: 15, historyPast: [], historyFuture: [] }
+      };
+    }
     await putProject(project);
     await refreshProjectsList();
     await openProject(project.id);
   } catch (err) {
     console.error(err);
-    lzAlert('Não foi possível importar este JSON. Confirme que ele foi exportado pelo Lazy Editor e que o arquivo não está incompleto.');
+    lzAlert('Não foi possível importar este arquivo. Confirme que ele foi exportado pelo Lazy Editor (.zip) e que não está incompleto.');
   }
 }
 function resetProjectForm(mode = 'create') {
@@ -989,7 +1137,7 @@ document.getElementById('btn-back-home').addEventListener('click', async () => {
 document.getElementById('btn-save-project').addEventListener('click', () => lzOpenExport());
 document.getElementById('btn-import-project-json-top').addEventListener('click', () => document.getElementById('project-json-input').click());
 document.getElementById('project-json-input').addEventListener('change', async e => {
-  const file = e.target.files?.[0]; if (file) await importProjectJSON(file); e.target.value = '';
+  const file = e.target.files?.[0]; if (file) await importProjectFile(file); e.target.value = '';
 });
 
 const state = {
@@ -1512,11 +1660,11 @@ lzSet.addEventListener('click',e=>{const t=e.target.closest('[data-theme],[data-
   lzApplyTheme();lzRenderSettings();});
 lzSet.addEventListener('input',e=>{const t=e.target;if(t.id==='lz-lang-q')return lzRenderSettings();const k=t.dataset.role||t.dataset.hex;if(!k||!/^#[0-9a-f]{6}$/i.test(t.value))return;
   lzTheme.custom[k]=t.value.toLowerCase();lzApplyTheme();lzSet.querySelector(`[data-hex=${k}]`).value=t.value;lzTheme.preset=undefined;lzSet.querySelector(`[data-pick=${k}]`).style.setProperty('--c',t.value);lzThsRender();});
-const LZ_L={};const LZ_KEYS=["Novo projeto", "Importar", "Continuar editando", "Buscar projeto", "Nenhum projeto encontrado", "Tente buscar por outro nome.", "Favoritar projeto", "Remover dos favoritos", "Projeto favoritado", "Favorito removido", "Abrindo projeto…", "Carregando áudio…", "Decodificando áudio…", "Montando a waveform…", "Criando projeto…", "Avançado", "Escolher áudio", "Criando…", "Importar projeto (.json)", "Criar e abrir editor", "Crie seu primeiro projeto", "Meus projetos", "Nenhum projeto por aqui ainda.", "tab|Início", "Projetos", "Configurações", "Editar projeto", "Exportar projeto", "Excluir projeto", "Exportar", "Início", "Fim", "Marcar", "Fixar Fim", "Editar", "Marcação", "Nenhum áudio importado.", "Volte aos projetos para selecionar um áudio.", "Reproduzir trecho", "Nome da marcação", "Salvar", "Fechar", "Volume de exportação", "Metadados", "Título", "Artista", "Álbum", "Comentário", "Tema", "Claro", "Escuro", "Personalizado", "Cor de destaque", "Esquema de cores", "Fundo", "Superfície", "Texto", "Texto secundário", "Destaque", "Redefinir cores", "Idioma", "Pesquisar idioma", "Voltar", "Desfazer", "Refazer", "Abra um projeto para exportar."];
+const LZ_L={};const LZ_KEYS=["Novo projeto", "Importar", "Continuar editando", "Buscar projeto", "Nenhum projeto encontrado", "Tente buscar por outro nome.", "Favoritar projeto", "Remover dos favoritos", "Favorito", "Projeto favoritado", "Favorito removido", "Abrindo projeto…", "Carregando áudio…", "Decodificando áudio…", "Montando a waveform…", "Criando projeto…", "Avançado", "Escolher áudio", "Criando…", "Importar projeto (.zip)", "Criar e abrir editor", "Crie seu primeiro projeto", "Meus projetos", "Nenhum projeto por aqui ainda.", "tab|Início", "Projetos", "Configurações", "Editar projeto", "Exportar projeto", "Excluir projeto", "Exportar", "Início", "Fim", "Marcar", "Fixar Fim", "Editar", "Marcação", "Nenhum áudio importado.", "Volte aos projetos para selecionar um áudio.", "Reproduzir trecho", "Nome da marcação", "Salvar", "Fechar", "Volume de exportação", "Metadados", "Título", "Artista", "Álbum", "Comentário", "Tema", "Claro", "Escuro", "Personalizado", "Cor de destaque", "Esquema de cores", "Fundo", "Superfície", "Texto", "Texto secundário", "Destaque", "Redefinir cores", "Idioma", "Pesquisar idioma", "Voltar", "Desfazer", "Refazer", "Abra um projeto para exportar."];
 function lzT(s,cx){const d=LZ_L[lzLang];if(!d)return s;let m;if(d[(cx?cx+'|':'')+s]!==undefined)return d[cx+'|'+s]??d[s];if(d[s]!==undefined)return d[s];
   if(m=s.match(/^(\d+) projetos?$/))return d._p?d._p(+m[1]):s;if(m=s.match(/^Marca (\d+)$/))return d._m?d._m+' '+m[1]:s;if(m=s.match(/^Marcação (\d+) · (.+)$/))return d._m?d._m+' '+m[1]+' · '+m[2]:s;return s;}
 function lzApply(){const W=document.createTreeWalker(document.body,4);let n;
-  while(n=W.nextNode()){const pe=n.parentNode;if(/^(SCRIPT|STYLE)$/.test(pe.nodeName)||pe.closest('.lz-pc-txt b,#editor-project-title'))continue;if(n.__o===undefined||n.nodeValue!==n.__t)n.__o=n.nodeValue;
+  while(n=W.nextNode()){const pe=n.parentNode;if(/^(SCRIPT|STYLE)$/.test(pe.nodeName)||pe.closest('.lz-pc-txt b,#editor-project-title,.lz-sp-n b'))continue;if(n.__o===undefined||n.nodeValue!==n.__t)n.__o=n.nodeValue;
     const core=n.__o.trim();if(!core)continue;const c=pe.closest('[data-ctx]'),out=lzT(core,c&&c.dataset.ctx),v=n.__o.replace(core,()=>out);if(n.nodeValue!==v)n.nodeValue=v;n.__t=n.nodeValue;}
   document.querySelectorAll('[title],[aria-label],[placeholder]').forEach(e=>['title','aria-label','placeholder'].forEach(a=>{const c=e.getAttribute(a);if(c===null)return;if(e['_o'+a]===undefined||c!==e['_t'+a])e['_o'+a]=c;const v=lzT(e['_o'+a]);if(c!==v)e.setAttribute(a,v);e['_t'+a]=v;}));}
 function lzSetLang(c){lzLang=c;try{localStorage.setItem('lz-lang',JSON.stringify(c))}catch(e){}document.documentElement.lang=lzLocale();lzABUpdate();lzRenderSettings();drawWaveform();if(typeof refreshProjectsList==='function')refreshProjectsList();}
@@ -1651,7 +1799,7 @@ async function lzOpenInNewProject(mark){
 function lzRegLang(c,n,e,s){const d={};for(const k in s)d[k]=s[k];if(d._p1||d._pn)d._p=q=>(q===1?(d._p1||d._pn):(d._pn||d._p1)).replace('{n}',q);LZ_L[c]=d;const r={c,n,e,u:1},i=LANGS.findIndex(x=>x.c===c);if(i>=0)LANGS[i]=r;else LANGS.push(r);}
 (function(){let o={};try{o=JSON.parse(localStorage.getItem('lz-langs'))||{}}catch(e){}for(const c in o){const L=o[c];if(L&&L.s&&typeof L.s==='object')lzRegLang(c,L.n,L.e,L.s);}if(lzLang!=='pt'&&!LZ_L[lzLang])lzLang='pt';})();
 function lzCollect(){const S=new Set([...LZ_KEYS,...LZ_X]),ok=t=>t.length>2&&t.length<=200&&!/\d/.test(t)&&/\p{L}/u.test(t)&&!/\.\w{2,4}$/.test(t),W=document.createTreeWalker(document.body,4);let n;
-  while(n=W.nextNode()){const pe=n.parentNode;if(/^(SCRIPT|STYLE)$/.test(pe.nodeName)||pe.closest('.lz-logo,#create-file-name,.lz-pc-txt,#editor-project-title,#lz-lang-list,#lz-roles,.lz-toast,#marks-list,#lz-mm-cur,#lz-mm-tot,#lz-ab-save,#lz-ab-res'))continue;const t=(n.__o!==undefined?n.__o:n.nodeValue).trim();if(!ok(t))continue;const c=pe.closest('[data-ctx]');S.add(c&&LZ_KEYS.includes(c.dataset.ctx+'|'+t)?c.dataset.ctx+'|'+t:t);}
+  while(n=W.nextNode()){const pe=n.parentNode;if(/^(SCRIPT|STYLE)$/.test(pe.nodeName)||pe.closest('.lz-logo,#create-file-name,.lz-pc-txt,#editor-project-title,#lz-lang-list,#lz-roles,.lz-sp-n b,.lz-toast,#marks-list,#lz-mm-cur,#lz-mm-tot,#lz-ab-save,#lz-ab-res'))continue;const t=(n.__o!==undefined?n.__o:n.nodeValue).trim();if(!ok(t))continue;const c=pe.closest('[data-ctx]');S.add(c&&LZ_KEYS.includes(c.dataset.ctx+'|'+t)?c.dataset.ctx+'|'+t:t);}
   document.querySelectorAll('[title],[aria-label],[placeholder]').forEach(e=>['title','aria-label','placeholder'].forEach(a=>{const v=e['_o'+a]!==undefined?e['_o'+a]:e.getAttribute(a);if(v&&ok(v.trim()))S.add(v.trim());}));return[...S];}
 function lzExportPt(){const st={};for(const k of lzCollect())st[k]=/^\w+\|/.test(k)?k.replace(/^\w+\|/,''):k;st._m='Marca';st._p1='{n} projeto';st._pn='{n} projetos';
   const o={app:'lazy-editor-language',version:1,code:'pt',name:'Português (Brasil)',english:'Brazilian Portuguese',instructions:'Traduza apenas os valores de "strings" e mantenha as chaves. Troque "code" (ex.: "en"), "name" e "english". Use {n} para o número em _p1/_pn.',strings:st},
@@ -1767,6 +1915,55 @@ async function lzStoreRefresh(){const T=document.getElementById('lz-store-txt'),
   try{if(st.estimate){const e=await st.estimate(),u=e.usage||0,q=e.quota||0,p=q?Math.min(100,u/q*100):0;T.textContent=`${lzBytes(u)} ${lzT('usados de')} ${lzBytes(q)}`;P.textContent=p<1?'<1%':Math.round(p)+'%';B.style.width=Math.max(1,p)+'%';}
     const per=st.persisted?await st.persisted():false;S.textContent=lzT(per?'Armazenamento persistente ativo.':'Armazenamento persistente inativo.');btn.disabled=!!per||!st.persist;}catch(e){}}
 document.getElementById('lz-store-btn').addEventListener('click',async()=>{try{const ok=await navigator.storage.persist();lzToast(lzT(ok?'Armazenamento persistente ativado.':'O navegador não concedeu o pedido. Instalar o app na tela inicial ajuda.'));}catch(e){lzToast(lzT('Seu navegador não permite solicitar armazenamento.'));}lzStoreRefresh();});
+
+/* ===== Configurações em lista: Geral, Temas, Idioma, Armazenamento e Sobre ===== */
+const LZ_VER='1.0';
+LZ_X.push('Geral','Temas','Armazenamento','Salvamento automático, Intervalo','Cores do app, Estilo das ondas','Uso por projeto, Espaço do dispositivo','Versão, Seus dados','Projeto','Salvamento automático','Salva o projeto sozinho enquanto você edita.','Intervalo de salvamento','segundos','minuto','minutos','Cores do app','Estilo das ondas','Sobre','Versão','Seus dados','Uso do armazenamento','Selecionar todos','Limpar seleção','Excluir selecionados','Excluir projetos','Os projetos selecionados serão excluídos deste dispositivo. Esta ação não pode ser desfeita.','Projetos excluídos','Não foi possível excluir os projetos.','Nenhum projeto salvo neste dispositivo.','Nenhum projeto','Outros');
+/* lista de categorias: cada item abre uma página própria */
+let lzStab=null;
+function lzSetOpen(k){const pg=document.getElementById('sp-'+k);if(!pg)return;lzStab=k;pg.querySelector('.lz-setbody').scrollTop=0;
+  if(k==='storage'){lzStorRender();lzStoreRefresh();}
+  lzPage('sp-'+k,true);lzApply();}
+function lzSetClose(){document.querySelectorAll('#settings-screen .lz-page.is-open').forEach(p=>p.classList.remove('is-open'));lzStab=null;}
+lzSet.addEventListener('click',e=>{const o=e.target.closest('[data-sopen]');if(o){lzSetOpen(o.dataset.sopen);return;}if(e.target.closest('[data-sclose]'))lzSetClose();});
+document.getElementById('btn-settings-back').addEventListener('click',lzSetClose);
+/* geral: salvamento automático */
+function lzASRender(){document.getElementById('lz-as-on').checked=lzAS.on;const box=document.getElementById('lz-as-int');box.classList.toggle('is-off',!lzAS.on);
+  box.innerHTML=LZ_AS_OPTS.map(v=>{const m=v>=60,n=m?v/60:v,u=m?(n===1?'minuto':'minutos'):'segundos';return `<button type="button" class="lz-opt${v===lzAS.sec?' on':''}" data-as-sec="${v}"><span class="lz-dot"></span><span class="lz-lg"><b>${n} <span>${u}</span></b></span></button>`;}).join('');}
+function lzASSave(){try{localStorage.setItem('lz-autosave',JSON.stringify(lzAS))}catch(e){}startAutoSaveTimer();lzASRender();lzApply();}
+document.getElementById('lz-as-on').addEventListener('change',e=>{lzAS.on=e.target.checked;lzASSave();});
+document.getElementById('lz-as-int').addEventListener('click',e=>{const b=e.target.closest('[data-as-sec]');if(!b||!lzAS.on)return;lzAS.sec=+b.dataset.asSec;lzASSave();});
+/* armazenamento por projeto */
+const LZ_SPAL=['#7c5cdc','#d9ae3c','#e8914f','#43b05c','#3b9ae1'];
+let lzStorSel=new Set(),lzStorRows=[],lzStorTok=0;
+function lzSz(n){const L=typeof lzLocale==='function'?lzLocale():'pt-BR',f=v=>v.toLocaleString(L,{maximumFractionDigits:1});return n>=1073741824?f(n/1073741824)+' GB':n>=1048576?f(n/1048576)+' MB':n>=1024?f(n/1024)+' KB':n+' B';}
+function lzProjSize(p){let n=(p.audioBlob&&p.audioBlob.size)||0;try{n+=new Blob([JSON.stringify({n:p.name,d:p.description,e:p.editState,a:p.advanced})]).size}catch(e){}return n;}
+async function lzStorRender(){const tok=++lzStorTok;let ps=[];try{ps=await listProjects()}catch(e){console.error(e)}if(tok!==lzStorTok)return;
+  const rows=ps.map(p=>({id:p.id,name:p.name||'—',size:lzProjSize(p)})).sort((a,b)=>b.size-a.size),total=rows.reduce((a,r)=>a+r.size,0);
+  rows.forEach((r,i)=>{r.c=i<5?LZ_SPAL[i]:'var(--mu)';r.f=total?r.size/total:0;});lzStorRows=rows;lzStorSel=new Set([...lzStorSel].filter(id=>rows.some(r=>r.id===id)));
+  const C=2*Math.PI*48,g=rows.slice(0,5).map(r=>({c:r.c,f:r.f})),rest=rows.slice(5).reduce((a,r)=>a+r.f,0);if(rest>0)g.push({c:'var(--mu)',f:rest});
+  const gap=g.length>1?3:0;let off=0,seg=`<circle cx="60" cy="60" r="48" style="stroke:var(--surf2)"/>`;
+  g.forEach(x=>{const len=Math.max(0,x.f*C-gap);seg+=`<circle cx="60" cy="60" r="48" style="stroke:${x.c}" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-(off+gap/2)).toFixed(2)}"/>`;off+=x.f*C;});
+  document.getElementById('lz-dn-seg').innerHTML=seg;document.getElementById('lz-dn-tot').textContent=lzSz(total);
+  const cnt=rows.length?`${rows.length} ${rows.length===1?'projeto':'projetos'}`:'Nenhum projeto';
+  document.getElementById('lz-dn-sub').textContent=cnt;document.getElementById('lz-stor-sum').textContent=cnt;
+  document.getElementById('lz-stor-list').innerHTML=rows.length?rows.map(r=>`<button type="button" class="lz-sp${lzStorSel.has(r.id)?' on':''}" data-sp="${escapeHTML(r.id)}" style="--c:${r.c}"><span class="lz-ck"><svg class="ic"><use href="#i-check"/></svg></span><span class="lz-sp-n"><b>${escapeHTML(r.name)}</b><small>${r.size>0?Math.max(1,Math.round(r.f*100)):0}%</small></span><span class="lz-sp-s">${lzSz(r.size)}</span></button>`).join(''):'<p class="lz-empty">Nenhum projeto salvo neste dispositivo.</p>';
+  lzStorUpd();lzApply();}
+function lzStorUpd(){const sel=lzStorRows.filter(r=>lzStorSel.has(r.id)),btn=document.getElementById('lz-stor-del'),all=document.getElementById('lz-stor-all');
+  btn.disabled=!sel.length;document.getElementById('lz-stor-del-sz').textContent=sel.length?lzSz(sel.reduce((a,r)=>a+r.size,0)):'';
+  all.style.visibility=lzStorRows.length?'visible':'hidden';all.textContent=lzT(sel.length===lzStorRows.length&&sel.length?'Limpar seleção':'Selecionar todos');}
+document.getElementById('lz-stor-list').addEventListener('click',e=>{const b=e.target.closest('[data-sp]');if(!b)return;const id=b.dataset.sp;if(lzStorSel.has(id))lzStorSel.delete(id);else lzStorSel.add(id);b.classList.toggle('on',lzStorSel.has(id));lzStorUpd();});
+document.getElementById('lz-stor-all').addEventListener('click',()=>{if(lzStorSel.size===lzStorRows.length)lzStorSel.clear();else lzStorSel=new Set(lzStorRows.map(r=>r.id));document.querySelectorAll('#lz-stor-list .lz-sp').forEach(b=>b.classList.toggle('on',lzStorSel.has(b.dataset.sp)));lzStorUpd();});
+document.getElementById('lz-stor-del').addEventListener('click',async()=>{const ids=[...lzStorSel];if(!ids.length)return;
+  if(!(await lzDialog({icon:'trash',danger:true,title:'Excluir projetos',text:lzT('Os projetos selecionados serão excluídos deste dispositivo. Esta ação não pode ser desfeita.'),ok:'Excluir'})))return;
+  let fail=false;for(const id of ids){try{await deleteProject(id);if(currentProjectId===id){currentProjectId=null;currentProject=null;}if(lzHomeId===id)lzHomeId=null;lzStorSel.delete(id);}catch(e){console.error(e);fail=true;}}
+  if(fail)lzAlert(lzT('Não foi possível excluir os projetos.'));else lzToast(lzT('Projetos excluídos'));
+  await lzStorRender();refreshProjectsList();lzStoreRefresh();});
+/* sobre */
+document.getElementById('lz-ver').textContent=LZ_VER;
+/* a tela de configurações redesenha o que depende de estado ao abrir / trocar idioma */
+{const _r=lzRenderSettings;lzRenderSettings=function(){_r();lzASRender();{const L=LANGS.find(l=>l.c===lzLang),el=document.getElementById('lz-lang-cur');if(L&&el)el.textContent=L.n;}if(lzStab==='storage')lzStorRender();lzApply();};}
+lzASRender();startAutoSaveTimer();
 </script>
 </body>
 </html> 
