@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "Lazy Editor",
+  "short_name": "Lazy Editor",
+  "description": "Importe um áudio, marque os trechos indesejados e exporte limpo.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#09090e",
+  "theme_color": "#09090e",
+  "categories": ["multimedia", "music", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
