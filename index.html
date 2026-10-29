@@ -2,7 +2,19 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#09090e">
+  <meta name="description" content="Importe um áudio, marque os trechos indesejados e exporte limpo.">
+  <meta name="application-name" content="Lazy Editor">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Lazy Editor">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <title>Lazy Editor</title>
   <style id="lz-tokens">
 /* ═══ PADRÃO DE CORES — REGRA ÚNICA DO APP ═══
@@ -41,6 +53,7 @@ function lzApplyTheme(){const p=lzTheme.mode==='custom'?lzTheme.custom:(LZ_P[lzT
   const v={...p,line:lzMix(p.surf,p.tx,.1),bg2:lzMix(p.bg,p.acc,.08),surf2:lzMix(p.surf,p.tx,.08),acc2:lzMix(p.acc,LZ_K.black,.22),acc3:lzMix(p.acc,LZ_K.white,.18),accs:p.acc+'55',tx2:lzMix(p.tx,p.bg,.22),'danger-soft':lzMix(p.surf,lzTok('danger'),.2),'on-acc':lzLum(p.acc)>165?p.bg:lzTok('on-mk')};
   for(const k in v)r.style.setProperty('--'+k,v[k]);
   LZ_STATIC.forEach(n=>v[n]=lzTok(n));
+  {const m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',p.bg);}
   r.style.colorScheme=((c>>16)*299+((c>>8)&255)*587+(c&255)*114)/1000>140?'light':'dark';window.lzCol=v;
   try{localStorage.setItem('lz-theme',JSON.stringify(lzTheme))}catch(e){}
   if(window.lzReady){drawWaveform();drawRuler();}}
@@ -219,6 +232,22 @@ button{position:relative}button::after{content:'';position:absolute;inset:0;bord
 .lz-about{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:18px 12px 22px}
 .lz-about .lz-tile.lg{margin-bottom:6px}
 </style>
+<style id="lz-pwa">
+/* ═══ PWA: margens seguras (notch, barra de status, barra de gestos), sem pull-to-refresh, modo standalone ═══ */
+:root{--sat:env(safe-area-inset-top,0px);--sar:env(safe-area-inset-right,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px)}
+html{background:var(--bg);overscroll-behavior:none;height:100%}
+body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+.screen,.lz-page{padding-top:var(--sat);padding-left:var(--sal);padding-right:var(--sar)}
+.lz-modal{padding:max(20px,var(--sat)) max(20px,var(--sar)) max(20px,var(--sab)) max(20px,var(--sal))}
+.lz-op{padding:var(--sat) var(--sar) var(--sab) var(--sal)}
+.lz-tabs,.lz-etabs{padding-left:calc(12px + var(--sal));padding-right:calc(12px + var(--sar))}
+.lz-dock{padding-left:max(20px,calc((100% - 520px)/2),calc(var(--sal) + 20px));padding-right:max(20px,calc((100% - 520px)/2),calc(var(--sar) + 20px))}
+.lz-pfoot{padding-left:max(16px,calc(var(--sal) + 16px));padding-right:max(16px,calc(var(--sar) + 16px))}
+.lz-toast{bottom:calc(96px + var(--sab));max-width:calc(100% - 32px - var(--sal) - var(--sar))}
+.lz-dust{padding:0}
+@media (display-mode:standalone),(display-mode:minimal-ui){body{-webkit-user-drag:none}}
+#lz-install-card.hidden{display:none!important}
+</style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute"><defs>
@@ -297,6 +326,12 @@ button{position:relative}button::after{content:'';position:absolute;inset:0;bord
   <div id="sp-general" class="lz-page" role="dialog" aria-label="Geral">
     <header class="lz-sethead"><button type="button" data-sclose aria-label="Voltar"><svg class="ic"><use href="#i-back"/></svg></button><h1>Geral</h1></header>
     <div class="lz-setbody">
+        <div id="lz-install-card" class="hidden">
+          <h2 class="lz-h">Aplicativo</h2>
+          <div class="lz-card">
+            <button type="button" id="lz-install-btn" class="lz-srow"><span class="lz-lg"><b>Instalar Lazy Editor</b><small>Adicione à tela inicial e use em tela cheia, até offline.</small></span><svg class="ic"><use href="#i-down"/></svg></button>
+          </div>
+        </div>
         <h2 class="lz-h">Projeto</h2>
         <div class="lz-card">
           <label class="lz-srow" for="lz-as-on"><span class="lz-lg"><b>Salvamento automático</b><small>Salva o projeto sozinho enquanto você edita.</small></span><input type="checkbox" id="lz-as-on" class="lz-sw2" role="switch" aria-label="Salvamento automático"></label>
@@ -1964,6 +1999,20 @@ document.getElementById('lz-ver').textContent=LZ_VER;
 /* a tela de configurações redesenha o que depende de estado ao abrir / trocar idioma */
 {const _r=lzRenderSettings;lzRenderSettings=function(){_r();lzASRender();{const L=LANGS.find(l=>l.c===lzLang),el=document.getElementById('lz-lang-cur');if(L&&el)el.textContent=L.n;}if(lzStab==='storage')lzStorRender();lzApply();};}
 lzASRender();startAutoSaveTimer();
+
+/* ===== PWA: service worker + botão "Instalar app" ===== */
+(function(){
+  if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){
+    window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.addEventListener('updatefound',()=>{const w=reg.installing;if(!w)return;w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)w.postMessage('skipWaiting');});});
+    }).catch(e=>console.warn('SW',e));});
+  }
+  let dip=null;const card=document.getElementById('lz-install-card'),btn=document.getElementById('lz-install-btn');
+  const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;if(card&&!standalone())card.classList.remove('hidden');});
+  btn&&btn.addEventListener('click',async()=>{if(!dip)return;dip.prompt();try{await dip.userChoice}catch(e){}dip=null;card.classList.add('hidden');});
+  window.addEventListener('appinstalled',()=>{dip=null;card&&card.classList.add('hidden');try{lzToast('App instalado')}catch(e){}});
+})();
 </script>
 </body>
 </html> 
